@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Plus, Upload } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
@@ -20,7 +22,9 @@ export default function Monthly() {
   const model = useSettingsStore(state => state.model)
   const monthlyReportAutoGenerate = useSettingsStore(state => state.monthlyReportAutoGenerate)
   const [saving, setSaving] = useState(false)
+  const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
   const month = currentMonthKey()
+  const hasSnapshotRecords = items.some(item => item.status === 'active')
 
   const focusItems = useMemo(() => {
     return items.filter(item => {
@@ -37,14 +41,38 @@ export default function Monthly() {
 
   return (
     <div className="space-y-4 pb-24">
-      <PageHeader title="月度确认" subtitle={`${month} · 少改一点也可以`} />
+      <PageHeader title="月度确认" subtitle={`${month} · 重点确认与快照`} />
+
+      {notice && (
+        <Card className={`p-3 text-sm ${notice.tone === 'error' ? 'border-[#e6c9c9] bg-[#fff7f7] text-[#a44f4f]' : 'text-[#4f6f62]'}`}>
+          {notice.text}
+        </Card>
+      )}
 
       <Card className="p-4">
         <h2 className="font-bold">本月重点项</h2>
         <p className="mt-1 text-sm text-[#76877e]">现金、投资、贷款和待确认记录会优先出现在这里。</p>
       </Card>
 
-      {focusItems.length === 0 ? (
+      {!hasSnapshotRecords ? (
+        <Card className="space-y-3 p-5 text-center text-sm text-[#8c9b94]">
+          <p>还没有正式记录，暂时不能生成月度快照。</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Link to="/ledger/new">
+              <Button className="w-full justify-start">
+                <Plus className="h-4 w-4" />
+                记一笔
+              </Button>
+            </Link>
+            <Link to="/migration">
+              <Button variant="secondary" className="w-full justify-start">
+                <Upload className="h-4 w-4" />
+                导入备份
+              </Button>
+            </Link>
+          </div>
+        </Card>
+      ) : focusItems.length === 0 ? (
         <Card className="p-6 text-center text-sm text-[#8c9b94]">暂无需要确认的项目。</Card>
       ) : (
         <div className="space-y-3">
@@ -77,8 +105,9 @@ export default function Monthly() {
       <Button
         size="lg"
         className="w-full"
-        disabled={saving}
+        disabled={saving || !hasSnapshotRecords}
         onClick={async () => {
+          if (!hasSnapshotRecords) return
           setSaving(true)
           const snapshot = createSnapshot(month)
           try {
@@ -92,19 +121,19 @@ export default function Monthly() {
                 snapshots: [...snapshots.filter(item => item.month !== snapshot.month), snapshot]
               })
               addReport(report)
-              alert(`已生成 ${snapshot.month} 月度快照和 AI 月报`)
+              setNotice({ tone: 'success', text: `已生成 ${snapshot.month} 月度快照和 AI 月报。` })
             } else {
-              alert(`已生成 ${snapshot.month} 月度快照`)
+              setNotice({ tone: 'success', text: `已生成 ${snapshot.month} 月度快照。` })
             }
           } catch (err) {
             addReport(createFailedReport(snapshot, err instanceof Error ? err.message : 'AI 月报生成失败。'))
-            alert(`已生成 ${snapshot.month} 月度快照。AI 月报生成失败，可在洞察里查看记录。`)
+            setNotice({ tone: 'error', text: `已生成 ${snapshot.month} 月度快照。AI 月报生成失败，可在洞察里查看记录。` })
           } finally {
             setSaving(false)
           }
         }}
       >
-        {saving ? '处理中...' : '生成本月快照'}
+        {saving ? '处理中...' : hasSnapshotRecords ? '生成本月快照' : '先添加记录再生成快照'}
       </Button>
 
       {latest && (

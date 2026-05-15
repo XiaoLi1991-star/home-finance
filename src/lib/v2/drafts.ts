@@ -14,6 +14,6 @@ export function createMigrationDrafts(items: LedgerItem[], now = new Date().toIS
 
 export function getDraftSourceLabel(source: DraftItem['source']): string {
   if (source === 'ai_entry') return 'AI 录入'
-  if (source === 'ai_migration') return 'AI 迁移'
-  return 'v1 迁移'
+  if (source === 'ai_migration') return 'AI 导入'
+  return '旧版导入'
 }

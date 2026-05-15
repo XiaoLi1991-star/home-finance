@@ -178,23 +178,23 @@ export function mapV1AssetCategory(type?: string, subType?: string, name = '', d
     if (['fund', 'stock', 'bond', 'gold', 'bank_wealth'].includes(rawSubType)) {
       return { category: 'investments', subType: rawSubType, confidence: 0.95, warnings }
     }
-    warnings.push(`Unrecognized investment subtype: ${rawSubType || 'empty'}`)
+    warnings.push('投资类型未能完全识别，请确认分类。')
     return { category: 'investments', subType: 'other', confidence: 0.65, warnings }
   }
 
   if (rawType === 'property') {
     const mapped = ['residence', 'parking', 'shop', 'land'].includes(rawSubType) ? rawSubType : 'other'
-    if (mapped === 'other' && rawSubType) warnings.push(`Unrecognized property subtype: ${rawSubType}`)
+    if (mapped === 'other' && rawSubType) warnings.push('房产类型未能完全识别，请确认分类。')
     return { category: 'property_real_estate', subType: mapped, confidence: mapped === 'other' ? 0.75 : 0.95, warnings }
   }
 
   if (rawType === 'vehicle') {
     const mapped = ['personal_car', 'business_car'].includes(rawSubType) ? rawSubType : 'other'
-    if (mapped === 'other' && rawSubType) warnings.push(`Unrecognized vehicle subtype: ${rawSubType}`)
+    if (mapped === 'other' && rawSubType) warnings.push('车辆或大件类型未能完全识别，请确认分类。')
     return { category: 'vehicles_goods', subType: mapped, confidence: mapped === 'other' ? 0.75 : 0.95, warnings }
   }
 
-  warnings.push(`Unrecognized asset type: ${rawType || 'empty'}`)
+  warnings.push('资产类型未能完全识别，请确认分类。')
   return { category: 'investments', subType: 'other', confidence: 0.45, warnings }
 }
 
@@ -222,6 +222,6 @@ export function mapV1LiabilityCategory(type?: string, subType?: string): Mapping
     return { category: 'liabilities_loans', subType: 'consumer_loan', confidence: 0.85, warnings }
   }
 
-  warnings.push(`Unrecognized liability type: ${rawType || 'empty'}`)
+  warnings.push('负债类型未能完全识别，请确认分类。')
   return { category: 'liabilities_loans', subType: 'other', confidence: 0.55, warnings }
 }

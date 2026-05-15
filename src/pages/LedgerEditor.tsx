@@ -30,6 +30,7 @@ export default function LedgerEditor() {
   const [note, setNote] = useState('')
   const [status, setStatus] = useState<LedgerStatus>('active')
   const [templateValue, setTemplateValue] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (!existing) return
@@ -59,13 +60,14 @@ export default function LedgerEditor() {
         : ''
 
   const save = () => {
+    setError('')
     const parsedAmount = Number(amount)
     if (!name.trim()) {
-      alert('请输入名称')
+      setError('请先填写记录名称。')
       return
     }
     if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
-      alert('请输入有效金额')
+      setError('请填写有效金额，金额不能小于 0。')
       return
     }
 
@@ -121,6 +123,7 @@ export default function LedgerEditor() {
   return (
     <div className="space-y-4 pb-24">
       <PageHeader title={editing ? '编辑记录' : '新增记录'} back />
+      {error && <Card className="border-[#e6c9c9] bg-[#fff7f7] p-4 text-sm text-[#a44f4f]">{error}</Card>}
       <Card className="space-y-4 p-4">
         <Field label="类型">
           <div className="grid grid-cols-2 gap-2">

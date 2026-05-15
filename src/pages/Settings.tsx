@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, Database, Download, KeyRound, Shield, Upload } from 'lucide-react'
+import { Bot, Database, Download, KeyRound, Shield, Upload, UserRound } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
@@ -20,9 +20,11 @@ export default function Settings() {
   const drafts = useLedgerStore(state => state.drafts)
   const model = useSettingsStore(state => state.model)
   const privacy = useSettingsStore(state => state.privacy)
+  const financialProfile = useSettingsStore(state => state.financialProfile)
   const monthlyReportAutoGenerate = useSettingsStore(state => state.monthlyReportAutoGenerate)
   const updateModel = useSettingsStore(state => state.updateModel)
   const updatePrivacy = useSettingsStore(state => state.updatePrivacy)
+  const updateFinancialProfile = useSettingsStore(state => state.updateFinancialProfile)
   const setMonthlyReportAutoGenerate = useSettingsStore(state => state.setMonthlyReportAutoGenerate)
   const [apiKey, setApiKeyValue] = useState('')
   const [savedKeyLabel, setSavedKeyLabel] = useState('未设置')
@@ -30,6 +32,7 @@ export default function Settings() {
   const [testing, setTesting] = useState(false)
   const [pin, setPin] = useState('')
   const [pinLabel, setPinLabel] = useState('未设置')
+  const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     void getAiApiKey().then(value => {
@@ -53,9 +56,13 @@ export default function Settings() {
   }), [drafts, histories, items, reports, snapshots])
 
   const saveKey = async () => {
-    await setAiApiKey(apiKey)
-    setSavedKeyLabel(maskSecret(apiKey))
-    alert('API Key 已保存到本地单独存储。')
+    try {
+      await setAiApiKey(apiKey)
+      setSavedKeyLabel(maskSecret(apiKey))
+      setNotice({ tone: 'success', text: '访问密钥已保存到本机。' })
+    } catch (err) {
+      setNotice({ tone: 'error', text: err instanceof Error ? err.message : '访问密钥保存失败。' })
+    }
   }
 
   const testConnection = async () => {
@@ -66,9 +73,9 @@ export default function Settings() {
         { role: 'system', content: '请只回复 OK。' },
         { role: 'user', content: '连接测试' }
       ], { maxTokens: 20, temperature: 0 })
-      alert(`连接成功：${result.content.slice(0, 40)}`)
+      setNotice({ tone: 'success', text: `连接成功：${result.content.slice(0, 40)}` })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '连接失败。')
+      setNotice({ tone: 'error', text: err instanceof Error ? err.message : '连接失败。' })
     } finally {
       setTesting(false)
     }
@@ -85,9 +92,9 @@ export default function Settings() {
       updatePrivacy({ launchProtectionEnabled: true })
       setPin('')
       setPinLabel('已设置')
-      alert('启动 PIN 已启用。')
+      setNotice({ tone: 'success', text: '启动 PIN 已启用。' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'PIN 保存失败。')
+      setNotice({ tone: 'error', text: err instanceof Error ? err.message : 'PIN 保存失败。' })
     }
   }
 
@@ -96,22 +103,32 @@ export default function Settings() {
     updatePrivacy({ launchProtectionEnabled: false })
     setPin('')
     setPinLabel('未设置')
+    setNotice({ tone: 'success', text: '启动 PIN 已关闭。' })
   }
 
   const saveCustomHeaders = () => {
     try {
       const parsed = JSON.parse(customHeadersText || '{}')
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('自定义请求头必须是 JSON 对象。')
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('自定义请求头格式不正确。')
       updateModel({ customHeaders: parsed as Record<string, string> })
-      alert('高级请求头已保存。')
+      setNotice({ tone: 'success', text: '更多连接参数已保存。' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'JSON 解析失败。')
+      setNotice({ tone: 'error', text: err instanceof Error ? err.message : '连接参数格式不正确。' })
     }
   }
 
+  const currentYear = new Date().getFullYear()
+  const profileAge = financialProfile.birthYear ? currentYear - financialProfile.birthYear : undefined
+
   return (
     <div className="space-y-4 pb-24">
-      <PageHeader title="设置" subtitle="模型、备份、隐私和迁移" />
+      <PageHeader title="设置" subtitle="画像、模型、备份和隐私" />
+
+      {notice && (
+        <Card className={`p-3 text-sm ${notice.tone === 'error' ? 'border-[#e6c9c9] bg-[#fff7f7] text-[#a44f4f]' : 'text-[#4f6f62]'}`}>
+          {notice.text}
+        </Card>
+      )}
 
       <Card className="p-4">
         <div className="mb-3 flex items-center gap-2">
@@ -127,74 +144,115 @@ export default function Settings() {
 
       <Card className="space-y-4 p-4">
         <div className="flex items-center gap-2">
-          <Bot className="h-5 w-5 text-[#4f9b79]" />
-          <h2 className="font-bold">模型配置</h2>
+          <UserRound className="h-5 w-5 text-[#486c9f]" />
+          <h2 className="font-bold">资产健康度参数</h2>
         </div>
-
-        <Field label="Provider">
-          <input className="input" value="OpenAI Compatible" readOnly />
-        </Field>
-        <Field label="Base URL">
-          <input className="input" value={model.baseUrl} onChange={event => updateModel({ baseUrl: event.target.value })} />
-        </Field>
-        <Field label="Model ID">
-          <input
-            className="input"
-            list="model-options"
-            value={model.model}
-            onChange={event => updateModel({ model: event.target.value })}
-          />
-          <datalist id="model-options">
-            <option value="MiniMax-M2.7" />
-            <option value="MiniMax-M2.7-highspeed" />
-          </datalist>
-        </Field>
-        <Field label={`API Key（${savedKeyLabel}）`}>
-          <input
-            className="input"
-            type="password"
-            value={apiKey}
-            onChange={event => setApiKeyValue(event.target.value)}
-            placeholder="只保存在本机，不进入备份"
-          />
-        </Field>
-        <div className="grid grid-cols-2 gap-2">
-          <Button variant="secondary" onClick={saveKey}>
-            <KeyRound className="h-4 w-4" />
-            保存 Key
-          </Button>
-          <Button onClick={testConnection} disabled={testing}>{testing ? '测试中...' : '测试连接'}</Button>
+        <p className="text-sm leading-6 text-[#76877e]">预期净资产 = 年龄 × 年收入 ÷ 10</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="出生年份">
+            <input
+              className="input"
+              type="number"
+              inputMode="numeric"
+              min="1900"
+              max={currentYear}
+              value={financialProfile.birthYear ?? ''}
+              onChange={event => updateFinancialProfile({ birthYear: event.target.value ? Number(event.target.value) : undefined })}
+              placeholder="例如 1990"
+            />
+          </Field>
+          <Field label="年收入（万元）">
+            <input
+              className="input"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.1"
+              value={financialProfile.annualIncomeWan ?? ''}
+              onChange={event => updateFinancialProfile({ annualIncomeWan: event.target.value ? Number(event.target.value) : undefined })}
+              placeholder="例如 30"
+            />
+          </Field>
         </div>
-        <Button
-          variant="ghost"
-          className="w-full"
-          onClick={async () => {
-            await clearAiApiKey()
-            setApiKeyValue('')
-            setSavedKeyLabel('未设置')
-          }}
-        >
-          清除本地 API Key
-        </Button>
+        <div className="rounded-lg bg-[#f7faf8] p-3 text-sm text-[#55645e]">
+          当前年龄：{profileAge && profileAge > 0 ? `${profileAge} 岁` : '未计算'} · 年收入按家庭税前总收入填写
+        </div>
+      </Card>
 
-        <details className="rounded-lg bg-[#f7faf8] p-3">
-          <summary className="cursor-pointer text-sm font-bold">高级设置</summary>
-          <div className="mt-3 space-y-3">
-            <Field label="Request Path">
-              <input className="input" value={model.requestPath || ''} onChange={event => updateModel({ requestPath: event.target.value })} />
+      <Card className="p-4">
+        <details>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-[#4f9b79]" />
+              <span className="font-bold">AI 接入设置</span>
+            </span>
+            <span className="text-xs text-[#76877e]">{savedKeyLabel === '未设置' ? '未配置' : '已配置'}</span>
+          </summary>
+          <div className="mt-4 space-y-4">
+            <Field label="服务地址">
+              <input className="input" value={model.baseUrl} onChange={event => updateModel({ baseUrl: event.target.value })} />
             </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Temperature">
-                <input className="input" type="number" step="0.1" value={model.temperature ?? 0.2} onChange={event => updateModel({ temperature: Number(event.target.value) })} />
-              </Field>
-              <Field label="Max Tokens">
-                <input className="input" type="number" value={model.maxTokens ?? 1200} onChange={event => updateModel({ maxTokens: Number(event.target.value) })} />
-              </Field>
+            <Field label="模型名称">
+              <input
+                className="input"
+                list="model-options"
+                value={model.model}
+                onChange={event => updateModel({ model: event.target.value })}
+              />
+              <datalist id="model-options">
+                <option value="MiniMax-M2.7" />
+                <option value="MiniMax-M2.7-highspeed" />
+              </datalist>
+            </Field>
+            <Field label={`访问密钥（${savedKeyLabel}）`}>
+              <input
+                className="input"
+                type="password"
+                value={apiKey}
+                onChange={event => setApiKeyValue(event.target.value)}
+                placeholder="只保存在本机，不进入备份"
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="secondary" onClick={saveKey}>
+                <KeyRound className="h-4 w-4" />
+                保存密钥
+              </Button>
+              <Button onClick={testConnection} disabled={testing}>{testing ? '测试中...' : '测试连接'}</Button>
             </div>
-            <Field label="Custom Headers JSON">
-              <textarea className="input min-h-24 resize-none py-3 font-mono text-xs" value={customHeadersText} onChange={event => setCustomHeadersText(event.target.value)} />
-            </Field>
-            <Button variant="secondary" className="w-full" onClick={saveCustomHeaders}>保存高级设置</Button>
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={async () => {
+                await clearAiApiKey()
+                setApiKeyValue('')
+                setSavedKeyLabel('未设置')
+                setNotice({ tone: 'success', text: '本地访问密钥已清除。' })
+              }}
+            >
+              清除本地密钥
+            </Button>
+
+            <details className="rounded-lg bg-[#f7faf8] p-3">
+              <summary className="cursor-pointer text-sm font-bold">更多连接参数</summary>
+              <div className="mt-3 space-y-3">
+                <Field label="请求路径">
+                  <input className="input" value={model.requestPath || ''} onChange={event => updateModel({ requestPath: event.target.value })} />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="随机度">
+                    <input className="input" type="number" step="0.1" value={model.temperature ?? 0.2} onChange={event => updateModel({ temperature: Number(event.target.value) })} />
+                  </Field>
+                  <Field label="回复长度上限">
+                    <input className="input" type="number" value={model.maxTokens ?? 1200} onChange={event => updateModel({ maxTokens: Number(event.target.value) })} />
+                  </Field>
+                </div>
+                <Field label="自定义请求头">
+                  <textarea className="input min-h-24 resize-none py-3 font-mono text-xs" value={customHeadersText} onChange={event => setCustomHeadersText(event.target.value)} />
+                </Field>
+                <Button variant="secondary" className="w-full" onClick={saveCustomHeaders}>保存更多参数</Button>
+              </div>
+            </details>
           </div>
         </details>
       </Card>
@@ -231,12 +289,12 @@ export default function Settings() {
         <h2 className="font-bold">备份与迁移</h2>
         <Button className="w-full justify-start" onClick={exportBackup}>
           <Download className="h-4 w-4" />
-          导出 v2 JSON 备份
+          导出新版备份
         </Button>
         <Link to="/migration">
           <Button variant="secondary" className="w-full justify-start">
             <Upload className="h-4 w-4" />
-            导入 / v1 迁移向导
+            导入备份 / 旧版迁移
           </Button>
         </Link>
       </Card>

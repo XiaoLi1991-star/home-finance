@@ -12,16 +12,16 @@ const items = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#dce8e2] bg-white/95 shadow-[0_-6px_18px_rgba(36,53,47,0.06)] backdrop-blur">
-      <div className="mx-auto flex h-[64px] max-w-md items-center justify-around pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/60 bg-[#f8faf9]/80 shadow-[0_-8px_30px_rgb(0,0,0,0.03)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#f8faf9]/60 transition-all duration-300">
+      <div className="mx-auto flex h-[68px] max-w-md items-center justify-around gap-1 px-2 pb-[env(safe-area-inset-bottom)]">
         {items.map(item => (
           <NavLink
             key={item.path}
             to={item.path}
             className={({ isActive }) =>
               cn(
-                'flex h-full flex-1 flex-col items-center justify-center gap-1 text-[11px]',
-                isActive ? 'text-[#4f9b79]' : 'text-[#8c9b94]'
+                'flex h-12 flex-1 flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-semibold transition',
+                isActive ? 'bg-[#edf7f2] text-[#34745b]' : 'text-[#8c9b94] active:bg-[#f1f6f4]'
               )
             }
           >
@@ -33,4 +33,3 @@ export function BottomNav() {
     </nav>
   )
 }
-

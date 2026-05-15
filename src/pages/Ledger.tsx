@@ -52,7 +52,7 @@ export default function Ledger() {
             placeholder="搜索名称、备注、分类"
           />
         </label>
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {(['all', 'asset', 'liability'] as const).map(value => (
             <button
               key={value}

@@ -106,7 +106,7 @@ export function migrateV1Asset(asset: V1AssetLike, options: MigrationOptions = {
   const endMonth = toMonthKey(asset.maturityDate) || undefined
   const warnings = [...mapping.warnings]
   if (endMonth && isPastMonth(endMonth, currentMonth)) {
-    warnings.push(`End month ${endMonth} is before current month ${currentMonth}; confirm whether this record has ended.`)
+    warnings.push(`结束月份为 ${endMonth}，请确认这条记录是否已经结束。`)
   }
 
   const status = buildStatus(mapping.confidence, warnings, endMonth, currentMonth)
@@ -149,7 +149,7 @@ export function migrateV1Liability(liability: V1LiabilityLike, options: Migratio
   const endMonth = toMonthKey(liability.endDate) || undefined
   const warnings = [...mapping.warnings]
   if (endMonth && isPastMonth(endMonth, currentMonth)) {
-    warnings.push(`End month ${endMonth} is before current month ${currentMonth}; confirm whether this liability has ended.`)
+    warnings.push(`结束月份为 ${endMonth}，请确认这笔负债是否已经结束。`)
   }
 
   const status = buildStatus(mapping.confidence, warnings, endMonth, currentMonth)
@@ -212,11 +212,10 @@ export function migrateV1Backup(backup: V1BackupLike, options: MigrationOptions 
 export function parseV1BackupJson(jsonText: string): V1BackupLike {
   const parsed = JSON.parse(jsonText)
   if (!parsed || typeof parsed !== 'object') {
-    throw new Error('Backup JSON must be an object.')
+    throw new Error('备份内容格式不正确。')
   }
   if (!Array.isArray(parsed.assets) || !Array.isArray(parsed.liabilities)) {
-    throw new Error('Backup JSON must include assets and liabilities arrays.')
+    throw new Error('没有识别到可导入的旧版备份内容。')
   }
   return parsed as V1BackupLike
 }
-

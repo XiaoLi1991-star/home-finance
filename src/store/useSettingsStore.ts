@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { LEDGER_SCHEMA_VERSION, type AppSettings, type ModelSettings, type PrivacySettings } from '@/types/ledger'
+import { LEDGER_SCHEMA_VERSION, type AppSettings, type FinancialProfileSettings, type ModelSettings, type PrivacySettings } from '@/types/ledger'
 
 export const SETTINGS_STORAGE_KEY = 'ledger-v2-settings'
 
@@ -23,9 +23,12 @@ export const DEFAULT_PRIVACY_SETTINGS: PrivacySettings = {
   launchProtectionEnabled: false
 }
 
+export const DEFAULT_FINANCIAL_PROFILE_SETTINGS: FinancialProfileSettings = {}
+
 interface SettingsState extends AppSettings {
   updateModel: (patch: Partial<ModelSettings>) => void
   updatePrivacy: (patch: Partial<PrivacySettings>) => void
+  updateFinancialProfile: (patch: Partial<FinancialProfileSettings>) => void
   authorizeAi: (scope: string, enabled: boolean) => void
   setMonthlyReportAutoGenerate: (enabled: boolean) => void
   resetSettings: () => void
@@ -36,6 +39,7 @@ function createDefaultSettings(): AppSettings {
     schemaVersion: LEDGER_SCHEMA_VERSION,
     model: DEFAULT_MODEL_SETTINGS,
     privacy: DEFAULT_PRIVACY_SETTINGS,
+    financialProfile: DEFAULT_FINANCIAL_PROFILE_SETTINGS,
     aiAuthorizations: {},
     monthlyReportAutoGenerate: false
   }
@@ -59,6 +63,15 @@ export const useSettingsStore = create<SettingsState>()(
         set(state => ({
           privacy: {
             ...state.privacy,
+            ...patch
+          }
+        }))
+      },
+
+      updateFinancialProfile: (patch) => {
+        set(state => ({
+          financialProfile: {
+            ...state.financialProfile,
             ...patch
           }
         }))

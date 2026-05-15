@@ -154,10 +154,16 @@ export interface PrivacySettings {
   launchProtectionEnabled: boolean
 }
 
+export interface FinancialProfileSettings {
+  birthYear?: number
+  annualIncomeWan?: number
+}
+
 export interface AppSettings {
   schemaVersion: typeof LEDGER_SCHEMA_VERSION
   model: ModelSettings
   privacy: PrivacySettings
+  financialProfile: FinancialProfileSettings
   aiAuthorizations: Record<string, boolean>
   monthlyReportAutoGenerate: boolean
 }
@@ -206,4 +212,3 @@ export interface V1BackupLike {
   assets?: V1AssetLike[]
   liabilities?: V1LiabilityLike[]
 }
-

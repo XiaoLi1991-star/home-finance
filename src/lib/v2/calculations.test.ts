@@ -43,16 +43,49 @@ describe('ledger calculations', () => {
     expect(stats.activeItems).toHaveLength(3)
   })
 
-  it('calculates a rule-based family status score from debt and liquidity pressure', () => {
+  it('calculates asset health from expected net worth', () => {
     const stats = calculateLedgerStats([
-      item({ id: 'cash', kind: 'asset', category: 'cash_accounts', amount: 1 }),
-      item({ id: 'home', kind: 'asset', category: 'property_real_estate', amount: 190 }),
-      item({ id: 'loan', kind: 'liability', category: 'liabilities_loans', amount: 180 })
+      item({ id: 'cash', kind: 'asset', category: 'cash_accounts', amount: 10 }),
+      item({ id: 'home', kind: 'asset', category: 'property_real_estate', amount: 190 })
     ])
 
-    const score = calculateFamilyStatusScore(stats.totals)
+    const score = calculateFamilyStatusScore(stats.totals, { birthYear: 1986, annualIncomeWan: 50 }, 2026)
 
-    expect(score.score).toBeLessThan(75)
-    expect(score.reasons.some(reason => reason.includes('负债率'))).toBe(true)
+    expect(score.expectedNetWorth).toBe(200)
+    expect(score.accumulationRatio).toBe(1)
+    expect(score.score).toBe(80)
+    expect(score.title).toBe('积累良好')
+  })
+
+  it('caps asset health score at 100 for twice expected net worth', () => {
+    const stats = calculateLedgerStats([
+      item({ id: 'home', kind: 'asset', category: 'property_real_estate', amount: 500 })
+    ])
+
+    const score = calculateFamilyStatusScore(stats.totals, { birthYear: 1986, annualIncomeWan: 50 }, 2026)
+
+    expect(score.accumulationRatio).toBeGreaterThan(2)
+    expect(score.score).toBe(100)
+    expect(score.title).toBe('表现突出')
+  })
+
+  it('does not produce a misleading score when totals are empty', () => {
+    const stats = calculateLedgerStats([])
+    const score = calculateFamilyStatusScore(stats.totals, { birthYear: 1986, annualIncomeWan: 50 }, 2026)
+
+    expect(score.level).toBe('empty')
+    expect(score.score).toBe(0)
+    expect(score.title).toBe('还没有可计算数据')
+  })
+
+  it('requires birth year and annual income before scoring', () => {
+    const stats = calculateLedgerStats([
+      item({ id: 'home', kind: 'asset', category: 'property_real_estate', amount: 200 })
+    ])
+    const score = calculateFamilyStatusScore(stats.totals, undefined, 2026)
+
+    expect(score.level).toBe('missing_profile')
+    expect(score.score).toBe(0)
+    expect(score.title).toBe('先填写健康度参数')
   })
 })

@@ -37,14 +37,14 @@ function extractJson(text: string): unknown {
     if (arrayStart >= 0 && arrayEnd > arrayStart) {
       return JSON.parse(stripped.slice(arrayStart, arrayEnd + 1))
     }
-    throw new Error('AI 返回中没有可解析的 JSON。')
+    throw new Error('AI 返回格式不符合要求，请稍后重试或调整描述。')
   }
 }
 
 export function parseAiEntryRecords(text: string): AiEntryRecord[] {
   const parsed = extractJson(text) as { records?: AiEntryRecord[] } | AiEntryRecord[]
   const records = Array.isArray(parsed) ? parsed : parsed.records
-  if (!Array.isArray(records)) throw new Error('AI 返回 JSON 必须包含 records 数组。')
+  if (!Array.isArray(records)) throw new Error('AI 返回格式不符合要求，请稍后重试或调整描述。')
   return records
 }
 

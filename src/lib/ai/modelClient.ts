@@ -20,7 +20,7 @@ export interface ChatCompletionResult {
 function joinUrl(baseUrl: string, requestPath?: string): string {
   const trimmedBase = baseUrl.trim().replace(/\/+$/, '')
   const path = (requestPath || '/chat/completions').trim()
-  if (!trimmedBase) throw new Error('请先填写 Base URL。')
+  if (!trimmedBase) throw new Error('请先填写服务地址。')
   if (/\/chat\/completions\/?$/.test(trimmedBase) && path === '/chat/completions') return trimmedBase
   return `${trimmedBase}/${path.replace(/^\/+/, '')}`
 }
@@ -60,7 +60,7 @@ export async function requestChatCompletion(
   options: ChatCompletionOptions = {}
 ): Promise<ChatCompletionResult> {
   if (!settings.model.trim()) throw new Error('请先填写模型名。')
-  if (!apiKey.trim()) throw new Error('请先填写 API Key。')
+  if (!apiKey.trim()) throw new Error('请先填写访问密钥。')
 
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), settings.timeoutMs || 60000)
@@ -97,7 +97,7 @@ export async function requestChatCompletion(
 
     return { content, model: settings.model, raw }
   } catch (error) {
-    if (error instanceof SyntaxError) throw new Error('模型返回不是有效 JSON。')
+    if (error instanceof SyntaxError) throw new Error('模型返回格式不正确。')
     throw error
   } finally {
     window.clearTimeout(timeout)

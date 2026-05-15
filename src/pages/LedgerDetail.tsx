@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CheckCircle2, Pencil, XCircle } from 'lucide-react'
 import { Button } from '@/components/Button'
@@ -6,12 +7,24 @@ import { PageHeader } from '@/components/PageHeader'
 import { getCategoryLabel, getOwnerLabel, getStatusLabel, getSubTypeLabel } from '@/lib/v2/categories'
 import { formatWan } from '@/lib/utils'
 import { useLedgerStore } from '@/store/useLedgerStore'
+import type { ValuationChangeReason } from '@/types/ledger'
+
+const historyReasonLabels: Record<ValuationChangeReason, string> = {
+  manual_edit: '手动修改',
+  monthly_confirmation: '月度确认',
+  migration: '迁移导入',
+  ai_entry: 'AI 录入',
+  restore: '备份恢复'
+}
 
 export default function LedgerDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const item = useLedgerStore(state => state.items.find(entry => entry.id === id))
-  const histories = useLedgerStore(state => state.histories.filter(history => history.itemId === id))
+  const [confirmingEnd, setConfirmingEnd] = useState(false)
+  const items = useLedgerStore(state => state.items)
+  const allHistories = useLedgerStore(state => state.histories)
+  const item = useMemo(() => items.find(entry => entry.id === id), [id, items])
+  const histories = useMemo(() => allHistories.filter(history => history.itemId === id), [allHistories, id])
   const confirmItem = useLedgerStore(state => state.confirmItem)
   const endItem = useLedgerStore(state => state.endItem)
 
@@ -64,16 +77,33 @@ export default function LedgerDetail() {
         </Button>
       )}
 
-      {item.status !== 'ended' && (
+      {item.status !== 'ended' && !confirmingEnd && (
         <Button variant="danger" className="w-full" onClick={() => {
-          if (confirm('确认将该记录标记为已结束？')) {
-            endItem(item.id)
-            navigate('/ledger')
-          }
+          setConfirmingEnd(true)
         }}>
           <XCircle className="h-4 w-4" />
           标记已结束
         </Button>
+      )}
+
+      {item.status !== 'ended' && confirmingEnd && (
+        <Card className="space-y-3 border-[#e6c9c9] bg-[#fff7f7] p-4 text-sm text-[#8d4b4b]">
+          <p className="font-semibold">确认将这条记录标记为已结束？</p>
+          <p>结束后它不会再作为当前有效记录参与月度确认。</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="secondary" type="button" onClick={() => setConfirmingEnd(false)}>取消</Button>
+            <Button
+              variant="danger"
+              type="button"
+              onClick={() => {
+                endItem(item.id)
+                navigate('/ledger')
+              }}
+            >
+              确认结束
+            </Button>
+          </div>
+        </Card>
       )}
 
       <details className="rounded-lg border border-[#dce8e2] bg-white p-4">
@@ -88,7 +118,7 @@ export default function LedgerDetail() {
                   <span>{history.month}</span>
                   <b>{formatWan(history.amount)}</b>
                 </div>
-                <p className="mt-1 text-xs text-[#76877e]">{history.reason}</p>
+                <p className="mt-1 text-xs text-[#76877e]">{historyReasonLabels[history.reason] || '金额更新'}</p>
               </div>
             ))}
           </div>

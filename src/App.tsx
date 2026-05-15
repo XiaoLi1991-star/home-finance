@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Component, type ReactNode, useEffect, useState } from 'react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { BottomNav } from '@/components/BottomNav'
@@ -14,8 +14,35 @@ import MigrationWizard from '@/pages/MigrationWizard'
 import Monthly from '@/pages/Monthly'
 import Settings from '@/pages/Settings'
 import { useSettingsStore } from '@/store/useSettingsStore'
+import { Button } from '@/components/Button'
+import { Card } from '@/components/Card'
 
 const primaryPaths = new Set(['/', '/ledger', '/monthly', '/insights', '/settings'])
+
+class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error(`页面加载失败：${error instanceof Error ? error.message : String(error)}`)
+  }
+
+  render() {
+    if (!this.state.failed) return this.props.children
+    return (
+      <div className="space-y-4 pb-24 pt-6">
+        <Card className="space-y-3 p-5 text-sm text-[#55645e]">
+          <h1 className="text-lg font-bold text-[#24352f]">页面加载失败</h1>
+          <p>可以先返回上一页，或重新打开这个页面。</p>
+          <Button type="button" onClick={() => window.location.assign('#/')}>回到首页</Button>
+        </Card>
+      </div>
+    )
+  }
+}
 
 function AndroidBackButton() {
   const location = useLocation()
@@ -73,23 +100,25 @@ function Shell() {
   }, [blurInBackground])
 
   return (
-    <main className="min-h-screen bg-[#f1f6f4] px-4 text-[#24352f]">
+    <main className="min-h-screen bg-[#f8faf9] px-4 text-[#24352f] selection:bg-[#4f9b79]/20">
       <AndroidBackButton />
       <div className="mx-auto max-w-md">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/ledger" element={<Ledger />} />
-          <Route path="/ledger/new" element={<LedgerEditor />} />
-          <Route path="/ledger/:id" element={<LedgerDetail />} />
-          <Route path="/ledger/:id/edit" element={<LedgerEditor />} />
-          <Route path="/drafts" element={<DraftReview />} />
-          <Route path="/monthly" element={<Monthly />} />
-          <Route path="/insights" element={<Insights />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/ai-entry" element={<AiEntry />} />
-          <Route path="/migration" element={<MigrationWizard />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <RouteErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/ledger" element={<Ledger />} />
+            <Route path="/ledger/new" element={<LedgerEditor />} />
+            <Route path="/ledger/:id" element={<LedgerDetail />} />
+            <Route path="/ledger/:id/edit" element={<LedgerEditor />} />
+            <Route path="/drafts" element={<DraftReview />} />
+            <Route path="/monthly" element={<Monthly />} />
+            <Route path="/insights" element={<Insights />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/ai-entry" element={<AiEntry />} />
+            <Route path="/migration" element={<MigrationWizard />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </RouteErrorBoundary>
       </div>
       {showBottomNav && <BottomNav />}
       {covered && (

@@ -53,7 +53,7 @@ export default function AiEntry() {
       </Card>
 
       <Card className="p-4 text-sm text-[#76877e]">
-        AI 只会生成待确认记录，不会直接污染当前统计。模型请求会发送你输入的这段文字，请避免写入不必要的隐私细节。
+        AI 只会生成待确认记录，不会直接计入当前统计。模型请求会发送你输入的这段文字，请避免写入不必要的隐私细节。
       </Card>
 
       {error && <Card className="border-[#e6c9c9] bg-[#fff7f7] p-4 text-sm text-[#a44f4f]">{error}</Card>}
