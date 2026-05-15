@@ -123,7 +123,7 @@ export default function LedgerEditor() {
   return (
     <div className="space-y-4 pb-24">
       <PageHeader title={editing ? '编辑记录' : '新增记录'} back />
-      {error && <Card className="border-[#e6c9c9] bg-[#fff7f7] p-4 text-sm text-[#a44f4f]">{error}</Card>}
+      {error && <Card className="border-danger-light bg-danger-light p-4 text-sm text-danger">{error}</Card>}
       <Card className="space-y-4 p-4">
         <Field label="类型">
           <div className="grid grid-cols-2 gap-2">
@@ -199,7 +199,7 @@ export default function LedgerEditor() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-2">
-      <span className="text-sm font-semibold text-[#4f6f62]">{label}</span>
+      <span className="text-sm font-semibold text-ink-muted">{label}</span>
       {children}
     </label>
   )

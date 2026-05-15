@@ -71,7 +71,7 @@ export default function MigrationWizard() {
 
       <Card className="space-y-4 p-4">
         <label className="block">
-          <span className="text-sm font-semibold text-[#4f6f62]">选择备份文件</span>
+          <span className="text-sm font-semibold text-ink-muted">选择备份文件</span>
           <input
             className="mt-2 block w-full text-sm"
             type="file"
@@ -86,7 +86,7 @@ export default function MigrationWizard() {
         </label>
 
         <label className="block space-y-2">
-          <span className="text-sm font-semibold text-[#4f6f62]">或粘贴备份内容</span>
+          <span className="text-sm font-semibold text-ink-muted">或粘贴备份内容</span>
           <textarea
             className="input min-h-48 resize-none py-3 font-mono text-xs"
             value={text}
@@ -107,7 +107,7 @@ export default function MigrationWizard() {
         </div>
       </Card>
 
-      {message && <Card className="p-4 text-sm text-[#4f6f62]">{message}</Card>}
+      {message && <Card className="p-4 text-sm text-ink-muted">{message}</Card>}
       {confirmOverwrite && (
         <Card className="space-y-3 border-[#ecd8b7] bg-[#fffaf0] p-4 text-sm text-[#7b5a2a]">
           <p className="font-semibold">确认覆盖当前台账？</p>
@@ -118,7 +118,7 @@ export default function MigrationWizard() {
           </div>
         </Card>
       )}
-      {error && <Card className="border-[#e6c9c9] bg-[#fff7f7] p-4 text-sm text-[#a44f4f]">{error}</Card>}
+      {error && <Card className="border-danger-light bg-danger-light p-4 text-sm text-danger">{error}</Card>}
     </div>
   )
 }

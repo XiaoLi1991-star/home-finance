@@ -44,18 +44,18 @@ export default function Monthly() {
       <PageHeader title="月度确认" subtitle={`${month} · 重点确认与快照`} />
 
       {notice && (
-        <Card className={`p-3 text-sm ${notice.tone === 'error' ? 'border-[#e6c9c9] bg-[#fff7f7] text-[#a44f4f]' : 'text-[#4f6f62]'}`}>
+        <Card className={`p-3 text-sm ${notice.tone === 'error' ? 'border-danger-light bg-danger-light text-danger' : 'text-ink-muted'}`}>
           {notice.text}
         </Card>
       )}
 
       <Card className="p-4">
         <h2 className="font-bold">本月重点项</h2>
-        <p className="mt-1 text-sm text-[#76877e]">现金、投资、贷款和待确认记录会优先出现在这里。</p>
+        <p className="mt-1 text-sm text-ink-muted">现金、投资、贷款和待确认记录会优先出现在这里。</p>
       </Card>
 
       {!hasSnapshotRecords ? (
-        <Card className="space-y-3 p-5 text-center text-sm text-[#8c9b94]">
+        <Card className="space-y-3 p-5 text-center text-sm text-ink-muted">
           <p>还没有正式记录，暂时不能生成月度快照。</p>
           <div className="grid grid-cols-2 gap-2">
             <Link to="/ledger/new">
@@ -73,7 +73,7 @@ export default function Monthly() {
           </div>
         </Card>
       ) : focusItems.length === 0 ? (
-        <Card className="p-6 text-center text-sm text-[#8c9b94]">暂无需要确认的项目。</Card>
+        <Card className="p-6 text-center text-sm text-ink-muted">暂无需要确认的项目。</Card>
       ) : (
         <div className="space-y-3">
           {focusItems.map(item => {
@@ -83,8 +83,8 @@ export default function Monthly() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="font-bold">{item.name}</p>
-                    <p className="mt-1 text-xs text-[#76877e]">{getCategoryLabel(item.category)} · {getStatusLabel(item.status)}</p>
-                    {shouldEnd && <p className="mt-2 text-xs text-[#a44f4f]">可能已到结束月份，请确认。</p>}
+                    <p className="mt-1 text-xs text-ink-muted">{getCategoryLabel(item.category)} · {getStatusLabel(item.status)}</p>
+                    {shouldEnd && <p className="mt-2 text-xs text-danger">可能已到结束月份，请确认。</p>}
                   </div>
                   <p className="font-black">{formatWan(item.amount)}</p>
                 </div>
@@ -140,16 +140,16 @@ export default function Monthly() {
         <Card className="p-4">
           <h2 className="font-bold">本月已生成快照</h2>
           <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
-            <div className="rounded-xl bg-[#f1f6f4] p-3">
-              <p className="text-xs text-[#76877e]">资产</p>
+            <div className="rounded-xl bg-surface-dark p-3">
+              <p className="text-xs text-ink-muted">资产</p>
               <b>{formatWan(latest.totals.totalAssets)}</b>
             </div>
             <div className="rounded-xl bg-[#f8f1f1] p-3">
-              <p className="text-xs text-[#8d7474]">负债</p>
+              <p className="text-xs text-danger">负债</p>
               <b>{formatWan(latest.totals.totalLiabilities)}</b>
             </div>
-            <div className="rounded-xl bg-[#f7faf8] p-3">
-              <p className="text-xs text-[#76877e]">净值</p>
+            <div className="rounded-xl bg-surface-dim p-3">
+              <p className="text-xs text-ink-muted">净值</p>
               <b>{formatWan(latest.totals.netWorth)}</b>
             </div>
           </div>

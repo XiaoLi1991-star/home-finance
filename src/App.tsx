@@ -34,8 +34,8 @@ class RouteErrorBoundary extends Component<{ children: ReactNode }, { failed: bo
     if (!this.state.failed) return this.props.children
     return (
       <div className="space-y-4 pb-24 pt-6">
-        <Card className="space-y-3 p-5 text-sm text-[#55645e]">
-          <h1 className="text-lg font-bold text-[#24352f]">页面加载失败</h1>
+        <Card className="space-y-3 p-5 text-sm text-ink-muted">
+          <h1 className="text-lg font-bold text-ink">页面加载失败</h1>
           <p>可以先返回上一页，或重新打开这个页面。</p>
           <Button type="button" onClick={() => window.location.assign('#/')}>回到首页</Button>
         </Card>
@@ -100,7 +100,7 @@ function Shell() {
   }, [blurInBackground])
 
   return (
-    <main className="min-h-screen bg-[#f8faf9] px-4 text-[#24352f] selection:bg-[#4f9b79]/20">
+    <main className="min-h-screen bg-surface-dim px-4 text-ink selection:bg-brand/20">
       <AndroidBackButton />
       <div className="mx-auto max-w-md">
         <RouteErrorBoundary>
@@ -122,7 +122,7 @@ function Shell() {
       </div>
       {showBottomNav && <BottomNav />}
       {covered && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#f1f6f4] px-8 text-center text-sm font-semibold text-[#4f6f62]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-dark px-8 text-center text-sm font-semibold text-ink-muted">
           家庭台账已隐藏
         </div>
       )}

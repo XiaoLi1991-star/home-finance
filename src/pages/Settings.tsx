@@ -70,9 +70,9 @@ export default function Settings() {
     try {
       const key = await getAiApiKey()
       const result = await requestChatCompletion(model, key, [
-        { role: 'system', content: '请只回复 OK。' },
-        { role: 'user', content: '连接测试' }
-      ], { maxTokens: 20, temperature: 0 })
+        { role: 'system', content: 'Reply with exactly: OK' },
+        { role: 'user', content: 'connection test' }
+      ], { maxTokens: 200, temperature: 0.1 })
       setNotice({ tone: 'success', text: `连接成功：${result.content.slice(0, 40)}` })
     } catch (err) {
       setNotice({ tone: 'error', text: err instanceof Error ? err.message : '连接失败。' })
@@ -125,14 +125,14 @@ export default function Settings() {
       <PageHeader title="设置" subtitle="画像、模型、备份和隐私" />
 
       {notice && (
-        <Card className={`p-3 text-sm ${notice.tone === 'error' ? 'border-[#e6c9c9] bg-[#fff7f7] text-[#a44f4f]' : 'text-[#4f6f62]'}`}>
+        <Card className={`p-3 text-sm ${notice.tone === 'error' ? 'border-danger-light bg-danger-light text-danger' : 'text-ink-muted'}`}>
           {notice.text}
         </Card>
       )}
 
       <Card className="p-4">
         <div className="mb-3 flex items-center gap-2">
-          <Database className="h-5 w-5 text-[#4f9b79]" />
+          <Database className="h-5 w-5 text-brand" />
           <h2 className="font-bold">数据状态</h2>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center text-sm">
@@ -144,10 +144,10 @@ export default function Settings() {
 
       <Card className="space-y-4 p-4">
         <div className="flex items-center gap-2">
-          <UserRound className="h-5 w-5 text-[#486c9f]" />
+          <UserRound className="h-5 w-5 text-info" />
           <h2 className="font-bold">资产健康度参数</h2>
         </div>
-        <p className="text-sm leading-6 text-[#76877e]">预期净资产 = 年龄 × 年收入 ÷ 10</p>
+        <p className="text-sm leading-6 text-ink-muted">预期净资产 = 年龄 × 年收入 ÷ 10</p>
         <div className="grid grid-cols-2 gap-3">
           <Field label="出生年份">
             <input
@@ -174,7 +174,7 @@ export default function Settings() {
             />
           </Field>
         </div>
-        <div className="rounded-lg bg-[#f7faf8] p-3 text-sm text-[#55645e]">
+        <div className="rounded-lg bg-surface-dim p-3 text-sm text-ink-muted">
           当前年龄：{profileAge && profileAge > 0 ? `${profileAge} 岁` : '未计算'} · 年收入按家庭税前总收入填写
         </div>
       </Card>
@@ -183,10 +183,10 @@ export default function Settings() {
         <details>
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
             <span className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-[#4f9b79]" />
+              <Bot className="h-5 w-5 text-brand" />
               <span className="font-bold">AI 接入设置</span>
             </span>
-            <span className="text-xs text-[#76877e]">{savedKeyLabel === '未设置' ? '未配置' : '已配置'}</span>
+            <span className="text-xs text-ink-muted">{savedKeyLabel === '未设置' ? '未配置' : '已配置'}</span>
           </summary>
           <div className="mt-4 space-y-4">
             <Field label="服务地址">
@@ -233,7 +233,7 @@ export default function Settings() {
               清除本地密钥
             </Button>
 
-            <details className="rounded-lg bg-[#f7faf8] p-3">
+            <details className="rounded-lg bg-surface-dim p-3">
               <summary className="cursor-pointer text-sm font-bold">更多连接参数</summary>
               <div className="mt-3 space-y-3">
                 <Field label="请求路径">
@@ -259,15 +259,15 @@ export default function Settings() {
 
       <Card className="space-y-3 p-4">
         <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-[#4f9b79]" />
+          <Shield className="h-5 w-5 text-brand" />
           <h2 className="font-bold">隐私</h2>
         </div>
         <Toggle label="隐藏金额" checked={privacy.hideAmounts} onChange={checked => updatePrivacy({ hideAmounts: checked })} />
         <Toggle label="后台模糊金额" checked={privacy.blurInBackground} onChange={checked => updatePrivacy({ blurInBackground: checked })} />
-        <div className="rounded-lg bg-[#f7faf8] p-3">
+        <div className="rounded-lg bg-surface-dim p-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-semibold">启动 PIN（{pinLabel}）</span>
-            <span className="text-xs text-[#76877e]">{privacy.launchProtectionEnabled ? '已启用' : '未启用'}</span>
+            <span className="text-xs text-ink-muted">{privacy.launchProtectionEnabled ? '已启用' : '未启用'}</span>
           </div>
           <input
             className="input"
@@ -304,8 +304,8 @@ export default function Settings() {
 
 function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg bg-[#f7faf8] p-3">
-      <p className="text-xs text-[#76877e]">{label}</p>
+    <div className="rounded-lg bg-surface-dim p-3">
+      <p className="text-xs text-ink-muted">{label}</p>
       <p className="mt-1 font-black">{value}</p>
     </div>
   )
@@ -314,7 +314,7 @@ function Metric({ label, value }: { label: string; value: number }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-2">
-      <span className="text-sm font-semibold text-[#4f6f62]">{label}</span>
+      <span className="text-sm font-semibold text-ink-muted">{label}</span>
       {children}
     </label>
   )
@@ -322,9 +322,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
   return (
-    <label className="flex items-center justify-between gap-3 rounded-lg bg-[#f7faf8] p-3">
+    <label className="flex items-center justify-between gap-3 rounded-lg bg-surface-dim p-3">
       <span className="text-sm font-semibold">{label}</span>
-      <input className="h-5 w-5 accent-[#4f9b79]" type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} />
+      <input className="h-5 w-5 accent-brand" type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} />
     </label>
   )
 }

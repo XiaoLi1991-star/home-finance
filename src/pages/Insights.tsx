@@ -37,7 +37,7 @@ export default function Insights() {
       <Card className="p-4">
         <h2 className="font-bold">资产负债走势</h2>
         {trend.length === 0 ? (
-          <p className="mt-3 text-sm text-[#8c9b94]">生成月度快照后，这里会显示资产、负债、净资产走势。</p>
+          <p className="mt-3 text-sm text-ink-muted">生成月度快照后，这里会显示资产、负债、净资产走势。</p>
         ) : (
           <>
             <div className="mt-3 h-56">
@@ -54,12 +54,12 @@ export default function Insights() {
             </div>
             <div className="mt-3 space-y-2">
               {trend.slice(-3).map(point => (
-                <div key={point.month} className="rounded-lg bg-[#f7faf8] p-3 text-sm">
+                <div key={point.month} className="rounded-lg bg-surface-dim p-3 text-sm">
                   <div className="flex justify-between font-bold">
                     <span>{point.month}</span>
                     <span>{formatWan(point.netWorth, hidden)}</span>
                   </div>
-                  <p className="mt-1 text-xs text-[#76877e]">
+                  <p className="mt-1 text-xs text-ink-muted">
                     资产 {formatWan(point.totalAssets, hidden)} · 负债 {formatWan(point.totalLiabilities, hidden)}
                   </p>
                 </div>
@@ -72,7 +72,7 @@ export default function Insights() {
       <Card className="p-4">
         <h2 className="font-bold">分类结构</h2>
         {categoryRows.length === 0 ? (
-          <p className="mt-3 text-sm text-[#8c9b94]">暂无有效记录。</p>
+          <p className="mt-3 text-sm text-ink-muted">暂无有效记录。</p>
         ) : (
           <div className="mt-3 space-y-3">
             {categoryRows.map(row => (
@@ -81,8 +81,8 @@ export default function Insights() {
                   <span>{row.label}</span>
                   <b>{formatWan(row.amount, hidden)}</b>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-[#eef3f0]">
-                  <div className="h-full rounded-full bg-[#4f9b79]" style={{ width: `${Math.max(4, (row.amount / maxCategory) * 100)}%` }} />
+                <div className="h-2 overflow-hidden rounded-full bg-surface-dark">
+                  <div className="h-full rounded-full bg-brand" style={{ width: `${Math.max(4, (row.amount / maxCategory) * 100)}%` }} />
                 </div>
               </div>
             ))}
@@ -93,25 +93,25 @@ export default function Insights() {
       <Card className="p-4">
         <h2 className="font-bold">AI 月报</h2>
         {reports.length === 0 ? (
-          <p className="mt-3 text-sm text-[#8c9b94]">在设置里开启自动月报后，月度确认会生成 AI 报告。</p>
+          <p className="mt-3 text-sm text-ink-muted">在设置里开启自动月报后，月度确认会生成 AI 报告。</p>
         ) : (
           <div className="mt-3 space-y-3">
             {reports.map(report => (
-              <details key={report.id} className="rounded-lg bg-[#f7faf8] p-3">
+              <details key={report.id} className="rounded-lg bg-surface-dim p-3">
                 <summary className="cursor-pointer text-sm font-bold">
                   {report.month} · {report.status === 'completed' ? '已完成' : report.status === 'failed' ? '失败' : '生成中'}
                 </summary>
                 {report.error ? (
-                  <p className="mt-2 text-sm text-[#a44f4f]">{report.error}</p>
+                  <p className="mt-2 text-sm text-danger">{report.error}</p>
                 ) : (
                   <div className="mt-3 space-y-3">
                     {report.sections.map(section => (
                       <div key={section.title}>
                         <h3 className="text-sm font-bold">{section.title}</h3>
-                        <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[#55645e]">{section.content}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink-muted">{section.content}</p>
                       </div>
                     ))}
-                    <p className="text-xs text-[#8c9b94]">{report.disclaimer}</p>
+                    <p className="text-xs text-ink-muted">{report.disclaimer}</p>
                   </div>
                 )}
               </details>
@@ -125,8 +125,8 @@ export default function Insights() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-[#f7faf8] p-3">
-      <p className="text-xs text-[#76877e]">{label}</p>
+    <div className="rounded-lg bg-surface-dim p-3">
+      <p className="text-xs text-ink-muted">{label}</p>
       <p className="mt-1 font-black">{value}</p>
     </div>
   )

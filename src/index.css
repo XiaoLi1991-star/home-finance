@@ -4,8 +4,8 @@
 
 :root {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
-  color: #1d2b26;
-  background: #f8faf9;
+  color: #0f172a;
+  background: #f8fafc;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -33,6 +33,6 @@
 
 @layer components {
   .input {
-    @apply h-11 w-full rounded-xl border border-[#dce8e2] bg-white px-3 text-sm text-[#24352f] outline-none transition placeholder:text-[#9aa7a1] focus:border-[#4f9b79] focus:ring-2 focus:ring-[#4f9b79]/20;
+    @apply h-11 w-full rounded-xl border border-surface-border bg-white px-3 text-sm text-ink outline-none transition placeholder:text-ink-light focus:border-brand focus:ring-2 focus:ring-[#4f9b79]/20;
   }
 }

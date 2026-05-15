@@ -12,7 +12,7 @@ const items = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/60 bg-[#f8faf9]/80 shadow-[0_-8px_30px_rgb(0,0,0,0.03)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#f8faf9]/60 transition-all duration-300">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/60 bg-surface-dim/80 shadow-[0_-8px_30px_rgb(0,0,0,0.03)] backdrop-blur-xl supports-[backdrop-filter]:bg-surface-dim/60 transition-all duration-300">
       <div className="mx-auto flex h-[68px] max-w-md items-center justify-around gap-1 px-2 pb-[env(safe-area-inset-bottom)]">
         {items.map(item => (
           <NavLink
@@ -21,7 +21,7 @@ export function BottomNav() {
             className={({ isActive }) =>
               cn(
                 'flex h-12 flex-1 flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-semibold transition',
-                isActive ? 'bg-[#edf7f2] text-[#34745b]' : 'text-[#8c9b94] active:bg-[#f1f6f4]'
+                isActive ? 'bg-brand-light text-brand-dark' : 'text-ink-muted active:bg-surface-dark'
               )
             }
           >

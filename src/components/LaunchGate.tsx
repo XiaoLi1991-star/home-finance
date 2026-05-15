@@ -35,10 +35,10 @@ export function LaunchGate({ children }: { children: React.ReactNode }) {
   if (!enabled || ready) return <>{children}</>
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f1f6f4] px-4 text-[#24352f]">
+    <main className="flex min-h-screen items-center justify-center bg-surface-dark px-4 text-ink">
       <Card className="w-full max-w-sm p-5">
         <div className="mb-4 flex items-center gap-2">
-          <LockKeyhole className="h-5 w-5 text-[#4f9b79]" />
+          <LockKeyhole className="h-5 w-5 text-brand" />
           <h1 className="text-xl font-bold">解锁家庭台账</h1>
         </div>
         <input
@@ -50,7 +50,7 @@ export function LaunchGate({ children }: { children: React.ReactNode }) {
           placeholder="输入 PIN"
           autoFocus
         />
-        {error && <p className="mt-2 text-sm text-[#a44f4f]">{error}</p>}
+        {error && <p className="mt-2 text-sm text-danger">{error}</p>}
         <Button
           className="mt-4 w-full"
           onClick={async () => {

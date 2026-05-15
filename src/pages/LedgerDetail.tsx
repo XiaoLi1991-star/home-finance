@@ -32,7 +32,7 @@ export default function LedgerDetail() {
     return (
       <div className="space-y-4 pb-24">
         <PageHeader title="记录不存在" back />
-        <Card className="p-6 text-center text-sm text-[#76877e]">这条记录可能已经被删除。</Card>
+        <Card className="p-6 text-center text-sm text-ink-muted">这条记录可能已经被删除。</Card>
       </div>
     )
   }
@@ -53,8 +53,8 @@ export default function LedgerDetail() {
       />
 
       <Card className="p-5">
-        <p className="text-xs text-[#76877e]">当前金额</p>
-        <p className={`mt-1 text-3xl font-black ${item.kind === 'asset' ? 'text-[#287a5c]' : 'text-[#a44f4f]'}`}>
+        <p className="text-xs text-ink-muted">当前金额</p>
+        <p className={`mt-1 text-3xl font-black ${item.kind === 'asset' ? 'text-brand-dark' : 'text-danger'}`}>
           {item.kind === 'asset' ? '+' : '-'}
           {formatWan(item.amount)}
         </p>
@@ -64,7 +64,7 @@ export default function LedgerDetail() {
           <Info label="开始月份" value={item.startMonth} />
           <Info label="结束月份" value={item.endMonth || '长期'} />
         </div>
-        {item.note && <p className="mt-4 rounded-xl bg-[#f7faf8] p-3 text-sm text-[#55645e]">{item.note}</p>}
+        {item.note && <p className="mt-4 rounded-xl bg-surface-dim p-3 text-sm text-ink-muted">{item.note}</p>}
       </Card>
 
       {(item.status === 'draft' || item.status === 'pending_confirmation') && (
@@ -87,7 +87,7 @@ export default function LedgerDetail() {
       )}
 
       {item.status !== 'ended' && confirmingEnd && (
-        <Card className="space-y-3 border-[#e6c9c9] bg-[#fff7f7] p-4 text-sm text-[#8d4b4b]">
+        <Card className="space-y-3 border-danger-light bg-danger-light p-4 text-sm text-[#8d4b4b]">
           <p className="font-semibold">确认将这条记录标记为已结束？</p>
           <p>结束后它不会再作为当前有效记录参与月度确认。</p>
           <div className="grid grid-cols-2 gap-2">
@@ -106,19 +106,19 @@ export default function LedgerDetail() {
         </Card>
       )}
 
-      <details className="rounded-lg border border-[#dce8e2] bg-white p-4">
+      <details className="rounded-lg border border-surface-border bg-white p-4">
         <summary className="cursor-pointer font-bold">历史记录（默认归档）</summary>
         {histories.length === 0 ? (
-          <p className="mt-3 text-sm text-[#8c9b94]">暂无金额变动历史。</p>
+          <p className="mt-3 text-sm text-ink-muted">暂无金额变动历史。</p>
         ) : (
           <div className="mt-3 space-y-2">
             {histories.map(history => (
-              <div key={history.id} className="rounded-xl bg-[#f7faf8] p-3 text-sm">
+              <div key={history.id} className="rounded-xl bg-surface-dim p-3 text-sm">
                 <div className="flex justify-between">
                   <span>{history.month}</span>
                   <b>{formatWan(history.amount)}</b>
                 </div>
-                <p className="mt-1 text-xs text-[#76877e]">{historyReasonLabels[history.reason] || '金额更新'}</p>
+                <p className="mt-1 text-xs text-ink-muted">{historyReasonLabels[history.reason] || '金额更新'}</p>
               </div>
             ))}
           </div>
@@ -130,8 +130,8 @@ export default function LedgerDetail() {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-[#f7faf8] p-3">
-      <p className="text-xs text-[#76877e]">{label}</p>
+    <div className="rounded-xl bg-surface-dim p-3">
+      <p className="text-xs text-ink-muted">{label}</p>
       <p className="mt-1 font-bold">{value}</p>
     </div>
   )

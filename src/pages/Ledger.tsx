@@ -43,12 +43,12 @@ export default function Ledger() {
       />
 
       <Card className="p-3">
-        <label className="flex items-center gap-2 rounded-xl bg-[#f1f6f4] px-3 py-2">
-          <Search className="h-4 w-4 text-[#8c9b94]" />
+        <label className="flex items-center gap-2 rounded-xl bg-surface-dark px-3 py-2">
+          <Search className="h-4 w-4 text-ink-muted" />
           <input
             value={query}
             onChange={event => setQuery(event.target.value)}
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#9aa7a1]"
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-light"
             placeholder="搜索名称、备注、分类"
           />
         </label>
@@ -58,7 +58,7 @@ export default function Ledger() {
               key={value}
               onClick={() => setKind(value)}
               className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-                kind === value ? 'bg-[#4f9b79] text-white' : 'bg-[#eef3f0] text-[#4f6f62]'
+                kind === value ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
               }`}
             >
               {value === 'all' ? '全部' : value === 'asset' ? '资产' : '负债'}
@@ -67,7 +67,7 @@ export default function Ledger() {
           <button
             onClick={() => setCategory('all')}
             className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-              category === 'all' ? 'bg-[#4f9b79] text-white' : 'bg-[#eef3f0] text-[#4f6f62]'
+              category === 'all' ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
             }`}
           >
             全分类
@@ -77,7 +77,7 @@ export default function Ledger() {
               key={meta.value}
               onClick={() => setCategory(meta.value)}
               className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-                category === meta.value ? 'bg-[#4f9b79] text-white' : 'bg-[#eef3f0] text-[#4f6f62]'
+                category === meta.value ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
               }`}
             >
               {meta.label}
@@ -97,28 +97,28 @@ function LedgerSection({ title, items, empty }: { title: string; items: ReturnTy
     <section>
       <div className="mb-2 flex items-center justify-between px-1">
         <h2 className="font-bold">{title}</h2>
-        <span className="text-xs text-[#76877e]">{items.length} 项</span>
+        <span className="text-xs text-ink-muted">{items.length} 项</span>
       </div>
       {items.length === 0 ? (
-        <Card className="p-6 text-center text-sm text-[#8c9b94]">{empty}</Card>
+        <Card className="p-6 text-center text-sm text-ink-muted">{empty}</Card>
       ) : (
         <div className="space-y-3">
           {items.map(item => (
             <Link key={item.id} to={`/ledger/${item.id}`}>
-              <Card className="p-4 active:bg-[#f7faf8]">
+              <Card className="p-4 active:bg-surface-dim">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="truncate font-bold">{item.name}</p>
-                      <span className="rounded-full bg-[#eef3f0] px-2 py-0.5 text-[10px] text-[#4f6f62]">
+                      <span className="rounded-full bg-surface-dark px-2 py-0.5 text-[10px] text-ink-muted">
                         {getStatusLabel(item.status)}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-[#76877e]">
+                    <p className="mt-1 text-xs text-ink-muted">
                       {getCategoryLabel(item.category)} · {getSubTypeLabel(item.category, item.subType)}
                     </p>
                   </div>
-                  <p className={`shrink-0 text-right font-black ${item.kind === 'asset' ? 'text-[#287a5c]' : 'text-[#a44f4f]'}`}>
+                  <p className={`shrink-0 text-right font-black ${item.kind === 'asset' ? 'text-brand-dark' : 'text-danger'}`}>
                     {item.kind === 'asset' ? '+' : '-'}
                     {formatWan(item.amount)}
                   </p>

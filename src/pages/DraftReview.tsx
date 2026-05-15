@@ -20,9 +20,9 @@ export default function DraftReview() {
       <PageHeader title="待确认记录" subtitle="确认后才会写入正式台账" back />
 
       {drafts.length === 0 ? (
-        <Card className="p-6 text-center text-sm text-[#8c9b94]">
+        <Card className="p-6 text-center text-sm text-ink-muted">
           暂无待确认记录。
-          <Link className="mt-3 block font-semibold text-[#4f9b79]" to="/ledger">返回台账</Link>
+          <Link className="mt-3 block font-semibold text-brand" to="/ledger">返回台账</Link>
         </Card>
       ) : (
         <>
@@ -30,7 +30,7 @@ export default function DraftReview() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="font-bold">共 {drafts.length} 条</h2>
-                <p className="mt-1 text-xs text-[#76877e]">待确认和草稿不会计入当前统计。</p>
+                <p className="mt-1 text-xs text-ink-muted">待确认和草稿不会计入当前统计。</p>
               </div>
               <Button size="sm" variant="ghost" onClick={clearDrafts}>清空</Button>
             </div>
@@ -47,18 +47,18 @@ export default function DraftReview() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-bold">{draft.item.name}</h3>
-                      <span className="rounded-full bg-[#eef3f0] px-2 py-0.5 text-[10px] text-[#4f6f62]">
+                      <span className="rounded-full bg-surface-dark px-2 py-0.5 text-[10px] text-ink-muted">
                         {getDraftSourceLabel(draft.source)}
                       </span>
                       <span className="rounded-full bg-[#fff6df] px-2 py-0.5 text-[10px] text-[#8d6c23]">
                         {getStatusLabel(draft.item.status)}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-[#76877e]">
+                    <p className="mt-1 text-xs text-ink-muted">
                       {getCategoryLabel(draft.item.category)} · {getSubTypeLabel(draft.item.category, draft.item.subType)}
                     </p>
                   </div>
-                  <b className={draft.item.kind === 'asset' ? 'text-[#287a5c]' : 'text-[#a44f4f]'}>
+                  <b className={draft.item.kind === 'asset' ? 'text-brand-dark' : 'text-danger'}>
                     {formatWan(draft.item.amount)}
                   </b>
                 </div>
