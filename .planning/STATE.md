@@ -49,13 +49,14 @@ Execution pivot:
 
 ## Current Position
 
-Wave 3 insights, settings, migration, and AI workflows are complete in the clean subproject.
+Wave 4 Android hardening and release verification are complete in the clean subproject.
 
 Completed summaries:
 
 - `.planning/phases/01-v2-android-rewrite/wave-1-SUMMARY.md`
 - `.planning/phases/01-v2-android-rewrite/wave-2-SUMMARY.md`
 - `.planning/phases/01-v2-android-rewrite/wave-3-SUMMARY.md`
+- `.planning/phases/01-v2-android-rewrite/wave-4-SUMMARY.md`
 
 Latest verification:
 
@@ -65,7 +66,10 @@ Latest verification:
 - Browser check passed on `http://127.0.0.1:59615/` with a 390px mobile viewport.
 - Supplied v1 backup migrated to 14 items: 7 active and 7 pending confirmation.
 - MiniMax OpenAI-compatible smoke test passed.
+- Android project was added and synced.
+- Debug APK build passed with Android Studio JBR Java 21 and local Android SDK.
 
-Next start from Wave 4 in:
+Next:
 
-`.planning/phases/01-v2-android-rewrite/phase-plan.md`
+- Review the Android build locally in Android Studio or on a device.
+- Decide whether to add native secure storage and local notifications before personal release.

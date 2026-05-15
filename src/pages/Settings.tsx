@@ -6,6 +6,7 @@ import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
 import { downloadTextFile } from '@/lib/file'
 import { requestChatCompletion } from '@/lib/ai/modelClient'
+import { clearLaunchPin, hasLaunchPin, setLaunchPin } from '@/lib/native/launchProtection'
 import { clearAiApiKey, getAiApiKey, maskSecret, setAiApiKey } from '@/lib/native/secrets'
 import { serializeV2Backup } from '@/lib/v2/backup'
 import { useLedgerStore } from '@/store/useLedgerStore'
@@ -27,12 +28,15 @@ export default function Settings() {
   const [savedKeyLabel, setSavedKeyLabel] = useState('未设置')
   const [customHeadersText, setCustomHeadersText] = useState('{}')
   const [testing, setTesting] = useState(false)
+  const [pin, setPin] = useState('')
+  const [pinLabel, setPinLabel] = useState('未设置')
 
   useEffect(() => {
     void getAiApiKey().then(value => {
       setApiKeyValue(value)
       setSavedKeyLabel(maskSecret(value))
     })
+    void hasLaunchPin().then(exists => setPinLabel(exists ? '已设置' : '未设置'))
   }, [])
 
   useEffect(() => {
@@ -73,6 +77,25 @@ export default function Settings() {
   const exportBackup = () => {
     const stamp = new Date().toISOString().slice(0, 10)
     downloadTextFile(`family-finance-v2-${stamp}.json`, serializeV2Backup(data))
+  }
+
+  const savePin = async () => {
+    try {
+      await setLaunchPin(pin)
+      updatePrivacy({ launchProtectionEnabled: true })
+      setPin('')
+      setPinLabel('已设置')
+      alert('启动 PIN 已启用。')
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'PIN 保存失败。')
+    }
+  }
+
+  const disablePin = async () => {
+    await clearLaunchPin()
+    updatePrivacy({ launchProtectionEnabled: false })
+    setPin('')
+    setPinLabel('未设置')
   }
 
   const saveCustomHeaders = () => {
@@ -183,6 +206,24 @@ export default function Settings() {
         </div>
         <Toggle label="隐藏金额" checked={privacy.hideAmounts} onChange={checked => updatePrivacy({ hideAmounts: checked })} />
         <Toggle label="后台模糊金额" checked={privacy.blurInBackground} onChange={checked => updatePrivacy({ blurInBackground: checked })} />
+        <div className="rounded-lg bg-[#f7faf8] p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-semibold">启动 PIN（{pinLabel}）</span>
+            <span className="text-xs text-[#76877e]">{privacy.launchProtectionEnabled ? '已启用' : '未启用'}</span>
+          </div>
+          <input
+            className="input"
+            type="password"
+            inputMode="numeric"
+            value={pin}
+            onChange={event => setPin(event.target.value)}
+            placeholder="设置至少 4 位 PIN"
+          />
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Button size="sm" onClick={savePin}>保存并启用</Button>
+            <Button size="sm" variant="secondary" onClick={disablePin}>关闭</Button>
+          </div>
+        </div>
         <Toggle label="月度确认后自动生成 AI 月报" checked={monthlyReportAutoGenerate} onChange={setMonthlyReportAutoGenerate} />
       </Card>
 

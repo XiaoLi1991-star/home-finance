@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { BottomNav } from '@/components/BottomNav'
+import { LaunchGate } from '@/components/LaunchGate'
 import AiEntry from '@/pages/AiEntry'
 import DraftReview from '@/pages/DraftReview'
 import Home from '@/pages/Home'
@@ -12,6 +13,7 @@ import LedgerEditor from '@/pages/LedgerEditor'
 import MigrationWizard from '@/pages/MigrationWizard'
 import Monthly from '@/pages/Monthly'
 import Settings from '@/pages/Settings'
+import { useSettingsStore } from '@/store/useSettingsStore'
 
 const primaryPaths = new Set(['/', '/ledger', '/monthly', '/insights', '/settings'])
 
@@ -53,6 +55,22 @@ function AndroidBackButton() {
 function Shell() {
   const location = useLocation()
   const showBottomNav = primaryPaths.has(location.pathname)
+  const blurInBackground = useSettingsStore(state => state.privacy.blurInBackground)
+  const [covered, setCovered] = useState(false)
+
+  useEffect(() => {
+    const update = () => setCovered(blurInBackground && document.visibilityState === 'hidden')
+    document.addEventListener('visibilitychange', update)
+    const pause = CapacitorApp.addListener('pause', () => setCovered(blurInBackground))
+    const resume = CapacitorApp.addListener('resume', () => setCovered(false))
+    update()
+
+    return () => {
+      document.removeEventListener('visibilitychange', update)
+      void pause.then(handle => handle.remove())
+      void resume.then(handle => handle.remove())
+    }
+  }, [blurInBackground])
 
   return (
     <main className="min-h-screen bg-[#f1f6f4] px-4 text-[#24352f]">
@@ -74,6 +92,11 @@ function Shell() {
         </Routes>
       </div>
       {showBottomNav && <BottomNav />}
+      {covered && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#f1f6f4] px-8 text-center text-sm font-semibold text-[#4f6f62]">
+          家庭台账已隐藏
+        </div>
+      )}
     </main>
   )
 }
@@ -81,7 +104,9 @@ function Shell() {
 export default function App() {
   return (
     <HashRouter>
-      <Shell />
+      <LaunchGate>
+        <Shell />
+      </LaunchGate>
     </HashRouter>
   )
 }
