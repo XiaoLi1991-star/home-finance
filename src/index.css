@@ -12,3 +12,27 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .input {
+    @apply h-11 w-full rounded-xl border border-[#dce8e2] bg-white px-3 text-sm text-[#24352f] outline-none transition placeholder:text-[#9aa7a1] focus:border-[#4f9b79] focus:ring-2 focus:ring-[#4f9b79]/20;
+  }
+}

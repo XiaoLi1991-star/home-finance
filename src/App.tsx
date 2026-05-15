@@ -1,15 +1,81 @@
-export default function App() {
+import { useEffect } from 'react'
+import { App as CapacitorApp } from '@capacitor/app'
+import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { BottomNav } from '@/components/BottomNav'
+import Home from '@/pages/Home'
+import Insights from '@/pages/Insights'
+import Ledger from '@/pages/Ledger'
+import LedgerDetail from '@/pages/LedgerDetail'
+import LedgerEditor from '@/pages/LedgerEditor'
+import Monthly from '@/pages/Monthly'
+import Settings from '@/pages/Settings'
+
+const primaryPaths = new Set(['/', '/ledger', '/monthly', '/insights', '/settings'])
+
+function AndroidBackButton() {
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    let active = true
+    let cleanup: (() => void) | undefined
+
+    CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (primaryPaths.has(location.pathname)) {
+        void CapacitorApp.exitApp()
+        return
+      }
+      if (canGoBack) {
+        navigate(-1)
+        return
+      }
+      navigate('/', { replace: true })
+    }).then(handle => {
+      if (!active) {
+        handle.remove()
+        return
+      }
+      cleanup = () => handle.remove()
+    })
+
+    return () => {
+      active = false
+      cleanup?.()
+    }
+  }, [location.pathname, navigate])
+
+  return null
+}
+
+function Shell() {
+  const location = useLocation()
+  const showBottomNav = primaryPaths.has(location.pathname)
+
   return (
-    <main className="min-h-screen bg-[#f1f6f4] px-4 py-6 text-[#24352f]">
-      <section className="mx-auto max-w-md rounded-2xl border border-[#dce8e2] bg-white p-5 shadow-sm">
-        <p className="text-sm text-[#76877e]">Family Finance Android v2</p>
-        <h1 className="mt-2 text-2xl font-bold">Data foundation in progress</h1>
-        <p className="mt-3 text-sm leading-6 text-[#55645e]">
-          The clean Android v2 subproject is ready. Wave 1 is building the ledger model,
-          migration, snapshots, and backup layer before the UI cutover.
-        </p>
-      </section>
+    <main className="min-h-screen bg-[#f1f6f4] px-4 text-[#24352f]">
+      <AndroidBackButton />
+      <div className="mx-auto max-w-md">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/ledger" element={<Ledger />} />
+          <Route path="/ledger/new" element={<LedgerEditor />} />
+          <Route path="/ledger/:id" element={<LedgerDetail />} />
+          <Route path="/ledger/:id/edit" element={<LedgerEditor />} />
+          <Route path="/monthly" element={<Monthly />} />
+          <Route path="/insights" element={<Insights />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+      {showBottomNav && <BottomNav />}
     </main>
   )
 }
 
+export default function App() {
+  return (
+    <HashRouter>
+      <Shell />
+    </HashRouter>
+  )
+}

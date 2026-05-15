@@ -22,7 +22,9 @@ It is a React + TypeScript + Vite project packaged for Android through Capacitor
 
 Key current paths:
 
-- `src/App.tsx`: temporary v2 shell while Wave 1 data work is underway.
+- `src/App.tsx`: v2 route shell and Android back-button handling.
+- `src/pages/*`: Home, Ledger, Ledger detail/editor, Monthly, Insights, and Settings.
+- `src/components/*`: shared Android-first UI primitives.
 - `src/types/ledger.ts`: v2 domain types.
 - `src/lib/v2/*`: v2 category, migration, calculation, history, snapshot, scoring, backup, and storage helpers.
 - `src/store/useLedgerStore.ts`: v2 local ledger store.
@@ -60,4 +62,3 @@ The v2 release is accepted when:
 - Insights show asset, liability, and net-worth trends.
 - Tests and TypeScript checks pass.
 - Capacitor Android build path remains intact.
-

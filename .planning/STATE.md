@@ -49,12 +49,20 @@ Execution pivot:
 
 ## Current Position
 
-Wave 1 data foundation is complete in the clean subproject.
+Wave 2 app shell and core ledger UX are complete in the clean subproject.
 
-Completed summary:
+Completed summaries:
 
-`.planning/phases/01-v2-android-rewrite/wave-1-SUMMARY.md`
+- `.planning/phases/01-v2-android-rewrite/wave-1-SUMMARY.md`
+- `.planning/phases/01-v2-android-rewrite/wave-2-SUMMARY.md`
 
-Next start from Wave 2 in:
+Latest verification:
+
+- `npm run check` passed.
+- `npm test` passed.
+- `npm run build:mobile` passed.
+- Browser check passed on `http://127.0.0.1:59615/` with a 390px mobile viewport.
+
+Next start from Wave 3 in:
 
 `.planning/phases/01-v2-android-rewrite/phase-plan.md`

@@ -53,7 +53,6 @@ describe('ledger calculations', () => {
     const score = calculateFamilyStatusScore(stats.totals)
 
     expect(score.score).toBeLessThan(75)
-    expect(score.reasons.some(reason => reason.includes('Debt'))).toBe(true)
+    expect(score.reasons.some(reason => reason.includes('负债率'))).toBe(true)
   })
 })
-
