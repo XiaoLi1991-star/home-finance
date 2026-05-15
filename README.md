@@ -1,6 +1,6 @@
-# Family Finance Android v2
+# 家财簿
 
-Android-first v2 rebuild of the household asset manager.
+Android-first household asset ledger app.
 
 The confirmed product/design spec lives at:
 
@@ -19,4 +19,3 @@ npm run build:mobile
 ## Scope
 
 This subproject is intentionally clean and Android-focused. The legacy root project is kept only as historical/reference material.
-
