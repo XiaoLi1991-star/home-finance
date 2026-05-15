@@ -2,11 +2,14 @@ import { useEffect } from 'react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { BottomNav } from '@/components/BottomNav'
+import AiEntry from '@/pages/AiEntry'
+import DraftReview from '@/pages/DraftReview'
 import Home from '@/pages/Home'
 import Insights from '@/pages/Insights'
 import Ledger from '@/pages/Ledger'
 import LedgerDetail from '@/pages/LedgerDetail'
 import LedgerEditor from '@/pages/LedgerEditor'
+import MigrationWizard from '@/pages/MigrationWizard'
 import Monthly from '@/pages/Monthly'
 import Settings from '@/pages/Settings'
 
@@ -61,9 +64,12 @@ function Shell() {
           <Route path="/ledger/new" element={<LedgerEditor />} />
           <Route path="/ledger/:id" element={<LedgerDetail />} />
           <Route path="/ledger/:id/edit" element={<LedgerEditor />} />
+          <Route path="/drafts" element={<DraftReview />} />
           <Route path="/monthly" element={<Monthly />} />
           <Route path="/insights" element={<Insights />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/ai-entry" element={<AiEntry />} />
+          <Route path="/migration" element={<MigrationWizard />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

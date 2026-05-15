@@ -18,6 +18,11 @@ interface LedgerState extends LedgerData {
   importData: (data: LedgerData) => void
   previewV1Migration: (backup: V1BackupLike) => MigrationResult
   applyMigratedItems: (items: LedgerItem[]) => void
+  addDrafts: (drafts: LedgerData['drafts']) => void
+  confirmDraft: (id: string) => void
+  confirmAllDrafts: () => void
+  discardDraft: (id: string) => void
+  clearDrafts: () => void
   addItem: (item: LedgerItem) => void
   updateItem: (id: string, patch: Partial<Omit<LedgerItem, 'id' | 'createdAt'>>) => void
   updateItemAmount: (id: string, amount: number, note?: string) => void
@@ -47,8 +52,64 @@ export const useLedgerStore = create<LedgerState>()(
 
       applyMigratedItems: (items) => {
         set(state => ({
-          items: [...items, ...state.items]
+          items: [
+            ...items,
+            ...state.items.filter(existing => {
+              const existingSource = `${existing.source.system}:${existing.source.sourceId || existing.id}`
+              return !items.some(item => `${item.source.system}:${item.source.sourceId || item.id}` === existingSource)
+            })
+          ]
         }))
+      },
+
+      addDrafts: (drafts) => {
+        set(state => ({
+          drafts: [...drafts, ...state.drafts.filter(existing => !drafts.some(draft => draft.id === existing.id))]
+        }))
+      },
+
+      confirmDraft: (id) => {
+        const now = new Date().toISOString()
+        set(state => {
+          const draft = state.drafts.find(item => item.id === id)
+          if (!draft) return state
+          return {
+            drafts: state.drafts.filter(item => item.id !== id),
+            items: [
+              {
+                ...draft.item,
+                status: draft.item.status === 'draft' ? 'active' : draft.item.status,
+                updatedAt: now
+              },
+              ...state.items
+            ]
+          }
+        })
+      },
+
+      confirmAllDrafts: () => {
+        const now = new Date().toISOString()
+        set(state => ({
+          drafts: [],
+          items: [
+            ...state.drafts.map(draft => ({
+              ...draft.item,
+              status: draft.item.status === 'draft' ? 'active' as const : draft.item.status,
+              updatedAt: now
+            })),
+            ...state.items
+          ]
+        }))
+      },
+
+      discardDraft: (id) => {
+        set(state => ({
+          drafts: state.drafts.filter(item => item.id !== id)
+        }))
+      },
+
+      clearDrafts: () => {
+        set({ drafts: [] })
       },
 
       addItem: (item) => {
@@ -114,4 +175,3 @@ export const useLedgerStore = create<LedgerState>()(
     }
   )
 )
-

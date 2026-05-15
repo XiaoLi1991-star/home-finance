@@ -24,7 +24,9 @@ Key current paths:
 
 - `src/App.tsx`: v2 route shell and Android back-button handling.
 - `src/pages/*`: Home, Ledger, Ledger detail/editor, Monthly, Insights, and Settings.
+- `src/pages/AiEntry.tsx`, `src/pages/DraftReview.tsx`, `src/pages/MigrationWizard.tsx`: AI entry and migration confirmation flows.
 - `src/components/*`: shared Android-first UI primitives.
+- `src/lib/ai/*`: OpenAI-compatible model client, privacy summaries, prompts, entry parsing, and reports.
 - `src/types/ledger.ts`: v2 domain types.
 - `src/lib/v2/*`: v2 category, migration, calculation, history, snapshot, scoring, backup, and storage helpers.
 - `src/store/useLedgerStore.ts`: v2 local ledger store.

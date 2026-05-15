@@ -49,12 +49,13 @@ Execution pivot:
 
 ## Current Position
 
-Wave 2 app shell and core ledger UX are complete in the clean subproject.
+Wave 3 insights, settings, migration, and AI workflows are complete in the clean subproject.
 
 Completed summaries:
 
 - `.planning/phases/01-v2-android-rewrite/wave-1-SUMMARY.md`
 - `.planning/phases/01-v2-android-rewrite/wave-2-SUMMARY.md`
+- `.planning/phases/01-v2-android-rewrite/wave-3-SUMMARY.md`
 
 Latest verification:
 
@@ -62,7 +63,9 @@ Latest verification:
 - `npm test` passed.
 - `npm run build:mobile` passed.
 - Browser check passed on `http://127.0.0.1:59615/` with a 390px mobile viewport.
+- Supplied v1 backup migrated to 14 items: 7 active and 7 pending confirmation.
+- MiniMax OpenAI-compatible smoke test passed.
 
-Next start from Wave 3 in:
+Next start from Wave 4 in:
 
 `.planning/phases/01-v2-android-rewrite/phase-plan.md`

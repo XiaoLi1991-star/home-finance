@@ -1,18 +1,25 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
+import { createFailedReport, generateMonthlyAiReport } from '@/lib/ai/reports'
+import { getAiApiKey } from '@/lib/native/secrets'
 import { getCategoryLabel, getStatusLabel } from '@/lib/v2/categories'
 import { compareMonth, currentMonthKey } from '@/lib/v2/migration'
 import { formatWan } from '@/lib/utils'
 import { useLedgerStore } from '@/store/useLedgerStore'
+import { useSettingsStore } from '@/store/useSettingsStore'
 
 export default function Monthly() {
   const items = useLedgerStore(state => state.items)
   const snapshots = useLedgerStore(state => state.snapshots)
   const createSnapshot = useLedgerStore(state => state.createSnapshot)
+  const addReport = useLedgerStore(state => state.addReport)
   const confirmItem = useLedgerStore(state => state.confirmItem)
   const endItem = useLedgerStore(state => state.endItem)
+  const model = useSettingsStore(state => state.model)
+  const monthlyReportAutoGenerate = useSettingsStore(state => state.monthlyReportAutoGenerate)
+  const [saving, setSaving] = useState(false)
   const month = currentMonthKey()
 
   const focusItems = useMemo(() => {
@@ -70,12 +77,34 @@ export default function Monthly() {
       <Button
         size="lg"
         className="w-full"
-        onClick={() => {
+        disabled={saving}
+        onClick={async () => {
+          setSaving(true)
           const snapshot = createSnapshot(month)
-          alert(`已生成 ${snapshot.month} 月度快照`)
+          try {
+            if (monthlyReportAutoGenerate) {
+              const apiKey = await getAiApiKey()
+              const report = await generateMonthlyAiReport({
+                settings: model,
+                apiKey,
+                snapshot,
+                items,
+                snapshots: [...snapshots.filter(item => item.month !== snapshot.month), snapshot]
+              })
+              addReport(report)
+              alert(`已生成 ${snapshot.month} 月度快照和 AI 月报`)
+            } else {
+              alert(`已生成 ${snapshot.month} 月度快照`)
+            }
+          } catch (err) {
+            addReport(createFailedReport(snapshot, err instanceof Error ? err.message : 'AI 月报生成失败。'))
+            alert(`已生成 ${snapshot.month} 月度快照。AI 月报生成失败，可在洞察里查看记录。`)
+          } finally {
+            setSaving(false)
+          }
         }}
       >
-        生成本月快照
+        {saving ? '处理中...' : '生成本月快照'}
       </Button>
 
       {latest && (

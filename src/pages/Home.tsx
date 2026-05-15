@@ -7,12 +7,14 @@ import { calculateLedgerStats } from '@/lib/v2/calculations'
 import { calculateFamilyStatusScore } from '@/lib/v2/scoring'
 import { formatPercent, formatWan } from '@/lib/utils'
 import { useLedgerStore } from '@/store/useLedgerStore'
+import { useSettingsStore } from '@/store/useSettingsStore'
 
 export default function Home() {
   const items = useLedgerStore(state => state.items)
+  const drafts = useLedgerStore(state => state.drafts)
+  const hidden = useSettingsStore(state => state.privacy.hideAmounts)
   const stats = calculateLedgerStats(items)
   const score = calculateFamilyStatusScore(stats.totals)
-  const hidden = false
 
   return (
     <div className="space-y-5 pb-24">
@@ -77,10 +79,19 @@ export default function Home() {
               记一笔
             </Button>
           </Link>
-          <Button variant="secondary" className="col-span-2 justify-start" disabled>
-            <Bot className="h-4 w-4" />
-            AI 快速记（Wave 3）
-          </Button>
+          <Link to="/ai-entry" className="col-span-2">
+            <Button variant="secondary" className="w-full justify-start">
+              <Bot className="h-4 w-4" />
+              AI 快速记
+            </Button>
+          </Link>
+          {drafts.length > 0 && (
+            <Link to="/drafts" className="col-span-2">
+              <Button variant="ghost" className="w-full justify-start">
+                待确认 {drafts.length} 条
+              </Button>
+            </Link>
+          )}
         </div>
       </Card>
 
@@ -97,4 +108,3 @@ export default function Home() {
     </div>
   )
 }
-
