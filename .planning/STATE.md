@@ -49,9 +49,12 @@ Execution pivot:
 
 ## Current Position
 
-Wave 1 implementation has started in the clean subproject.
+Wave 1 data foundation is complete in the clean subproject.
 
-Start from:
+Completed summary:
+
+`.planning/phases/01-v2-android-rewrite/wave-1-SUMMARY.md`
+
+Next start from Wave 2 in:
 
 `.planning/phases/01-v2-android-rewrite/phase-plan.md`
-
