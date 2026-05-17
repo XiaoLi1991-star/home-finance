@@ -7,9 +7,11 @@ import { getCategoryLabel, getStatusLabel, getSubTypeLabel } from '@/lib/v2/cate
 import { getDraftSourceLabel } from '@/lib/v2/drafts'
 import { formatWan } from '@/lib/utils'
 import { useLedgerStore } from '@/store/useLedgerStore'
+import { useSettingsStore } from '@/store/useSettingsStore'
 
 export default function DraftReview() {
   const drafts = useLedgerStore(state => state.drafts)
+  const hidden = useSettingsStore(state => state.privacy.hideAmounts)
   const confirmDraft = useLedgerStore(state => state.confirmDraft)
   const confirmAllDrafts = useLedgerStore(state => state.confirmAllDrafts)
   const discardDraft = useLedgerStore(state => state.discardDraft)
@@ -59,7 +61,7 @@ export default function DraftReview() {
                     </p>
                   </div>
                   <b className={draft.item.kind === 'asset' ? 'text-brand-dark' : 'text-danger'}>
-                    {formatWan(draft.item.amount)}
+                    {formatWan(draft.item.amount, hidden)}
                   </b>
                 </div>
 

@@ -22,6 +22,11 @@ android/.gradle/
 android/local.properties
 *.apk
 *.aab
+android/keystore.properties
+android/*.jks
+android/*.keystore
+output/
+replace_colors.js
 
 # Local data
 *.db
@@ -37,4 +42,3 @@ android/local.properties
 *.njsproj
 *.sln
 *.sw?
-

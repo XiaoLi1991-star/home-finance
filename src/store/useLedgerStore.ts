@@ -26,6 +26,7 @@ interface LedgerState extends LedgerData {
   addItem: (item: LedgerItem) => void
   updateItem: (id: string, patch: Partial<Omit<LedgerItem, 'id' | 'createdAt'>>) => void
   updateItemAmount: (id: string, amount: number, note?: string) => void
+  deleteItem: (id: string) => void
   confirmItem: (id: string) => void
   endItem: (id: string) => void
   addHistory: (history: ValuationHistory) => void
@@ -136,6 +137,14 @@ export const useLedgerStore = create<LedgerState>()(
         })
       },
 
+      deleteItem: (id) => {
+        set(state => ({
+          items: state.items.filter(item => item.id !== id),
+          histories: state.histories.filter(history => history.itemId !== id),
+          drafts: state.drafts.filter(draft => draft.item.id !== id)
+        }))
+      },
+
       confirmItem: (id) => {
         const now = new Date().toISOString()
         set(state => ({
@@ -161,7 +170,7 @@ export const useLedgerStore = create<LedgerState>()(
       },
 
       addReport: (report) => {
-        set(state => ({ reports: [report, ...state.reports.filter(item => item.id !== report.id)] }))
+        set(state => ({ reports: [report, ...state.reports.filter(item => item.month !== report.month)] }))
       },
 
       resetLedger: () => {

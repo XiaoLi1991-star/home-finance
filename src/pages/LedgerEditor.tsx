@@ -1,13 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { Check, CreditCard, WalletCards, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
 import { CATEGORY_META, OWNER_OPTIONS, getCategoryMeta } from '@/lib/v2/categories'
 import { createManualLedgerItem } from '@/lib/v2/items'
-import { getCurrentMonth } from '@/lib/utils'
+import { cn, getCurrentMonth } from '@/lib/utils'
 import { useLedgerStore } from '@/store/useLedgerStore'
 import type { LedgerCategory, LedgerKind, LedgerOwner, LedgerStatus } from '@/types/ledger'
+
+const STATUS_OPTIONS: { value: LedgerStatus; label: string; hint: string; tone: ChoiceTone }[] = [
+  { value: 'active', label: '有效', hint: '纳入统计', tone: 'asset' },
+  { value: 'pending_confirmation', label: '待确认', hint: '月度核对', tone: 'info' },
+  { value: 'draft', label: '草稿', hint: '暂不统计', tone: 'neutral' },
+  { value: 'ended', label: '已结束', hint: '保留历史', tone: 'neutral' }
+]
+
+type ChoiceTone = 'asset' | 'liability' | 'info' | 'neutral'
 
 export default function LedgerEditor() {
   const { id } = useParams()
@@ -124,28 +134,59 @@ export default function LedgerEditor() {
     <div className="space-y-4 pb-24">
       <PageHeader title={editing ? '编辑记录' : '新增记录'} back />
       {error && <Card className="border-danger-light bg-danger-light p-4 text-sm text-danger">{error}</Card>}
-      <Card className="space-y-4 p-4">
+      <Card className="space-y-5 p-4">
         <Field label="类型">
           <div className="grid grid-cols-2 gap-2">
-            <Button type="button" variant={kind === 'asset' ? 'primary' : 'secondary'} onClick={() => onKindChange('asset')}>资产</Button>
-            <Button type="button" variant={kind === 'liability' ? 'primary' : 'secondary'} onClick={() => onKindChange('liability')}>负债</Button>
+            <KindChoice
+              selected={kind === 'asset'}
+              tone="asset"
+              icon={WalletCards}
+              title="资产"
+              subtitle="现金、投资、房车"
+              onClick={() => onKindChange('asset')}
+            />
+            <KindChoice
+              selected={kind === 'liability'}
+              tone="liability"
+              icon={CreditCard}
+              title="负债"
+              subtitle="贷款、账单"
+              onClick={() => onKindChange('liability')}
+            />
           </div>
         </Field>
 
         <Field label="大类">
-          <select className="input" value={category} onChange={event => {
-            const value = event.target.value as LedgerCategory
-            setCategory(value)
-            setSubType(getCategoryMeta(value).defaultSubType)
-          }}>
-            {categoryOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
+          <div className="grid grid-cols-2 gap-2">
+            {categoryOptions.map(option => (
+              <ChoiceTile
+                key={option.value}
+                selected={category === option.value}
+                tone={option.kind === 'liability' ? 'liability' : 'asset'}
+                title={option.label}
+                subtitle={getCategoryHint(option)}
+                onClick={() => {
+                  setCategory(option.value)
+                  setSubType(getCategoryMeta(option.value).defaultSubType)
+                }}
+              />
+            ))}
+          </div>
         </Field>
 
         <Field label="子类">
-          <select className="input" value={subType} onChange={event => setSubType(event.target.value)}>
-            {meta.subTypes.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
+          <div className="flex flex-wrap gap-2">
+            {meta.subTypes.map(option => (
+              <PillChoice
+                key={option.value}
+                selected={subType === option.value}
+                tone={kind === 'liability' ? 'liability' : 'asset'}
+                onClick={() => setSubType(option.value)}
+              >
+                {option.label}
+              </PillChoice>
+            ))}
+          </div>
         </Field>
 
         <Field label="名称">
@@ -153,9 +194,18 @@ export default function LedgerEditor() {
         </Field>
 
         <Field label="归属人">
-          <select className="input" value={owner} onChange={event => setOwner(event.target.value as LedgerOwner)}>
-            {OWNER_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
+          <div className="grid grid-cols-3 gap-2">
+            {OWNER_OPTIONS.map(option => (
+              <PillChoice
+                key={option.value}
+                selected={owner === option.value}
+                tone="neutral"
+                onClick={() => setOwner(option.value)}
+              >
+                {option.label}
+              </PillChoice>
+            ))}
+          </div>
         </Field>
 
         <Field label="金额（万元）">
@@ -178,12 +228,19 @@ export default function LedgerEditor() {
         )}
 
         <Field label="状态">
-          <select className="input" value={status} onChange={event => setStatus(event.target.value as LedgerStatus)}>
-            <option value="active">有效</option>
-            <option value="pending_confirmation">待确认</option>
-            <option value="draft">草稿</option>
-            <option value="ended">已结束</option>
-          </select>
+          <div className="grid grid-cols-2 gap-2">
+            {STATUS_OPTIONS.map(option => (
+              <ChoiceTile
+                key={option.value}
+                selected={status === option.value}
+                tone={option.tone}
+                title={option.label}
+                subtitle={option.hint}
+                compact
+                onClick={() => setStatus(option.value)}
+              />
+            ))}
+          </div>
         </Field>
 
         <Field label="备注">
@@ -198,9 +255,131 @@ export default function LedgerEditor() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block space-y-2">
+    <div className="space-y-2">
       <span className="text-sm font-semibold text-ink-muted">{label}</span>
       {children}
-    </label>
+    </div>
   )
+}
+
+function KindChoice({
+  selected,
+  tone,
+  icon: Icon,
+  title,
+  subtitle,
+  onClick
+}: {
+  selected: boolean
+  tone: ChoiceTone
+  icon: LucideIcon
+  title: string
+  subtitle: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'flex min-h-[76px] items-center gap-3 rounded-2xl border p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-brand/15 active:scale-[0.99]',
+        selected ? selectedChoiceClass(tone) : 'border-surface-border bg-surface-dim/70 text-ink'
+      )}
+      onClick={onClick}
+    >
+      <span
+        className={cn(
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+          selected ? selectedIconClass(tone) : 'bg-white text-ink-muted'
+        )}
+      >
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-black">{title}</span>
+        <span className="mt-0.5 block text-xs text-ink-muted">{subtitle}</span>
+      </span>
+    </button>
+  )
+}
+
+function ChoiceTile({
+  selected,
+  tone,
+  title,
+  subtitle,
+  compact = false,
+  onClick
+}: {
+  selected: boolean
+  tone: ChoiceTone
+  title: string
+  subtitle: string
+  compact?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'relative rounded-2xl border text-left transition focus:outline-none focus:ring-2 focus:ring-brand/15 active:scale-[0.99]',
+        compact ? 'min-h-[62px] p-3' : 'min-h-[78px] p-3.5',
+        selected ? selectedChoiceClass(tone) : 'border-surface-border bg-surface-dim/70 text-ink'
+      )}
+      onClick={onClick}
+    >
+      <span className="block pr-6 text-sm font-black leading-5">{title}</span>
+      <span className="mt-1 block text-xs text-ink-muted">{subtitle}</span>
+      {selected && (
+        <span className={cn('absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full', selectedIconClass(tone))}>
+          <Check className="h-3.5 w-3.5" />
+        </span>
+      )}
+    </button>
+  )
+}
+
+function PillChoice({
+  selected,
+  tone,
+  children,
+  onClick
+}: {
+  selected: boolean
+  tone: ChoiceTone
+  children: React.ReactNode
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'min-h-10 rounded-full border px-3.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-brand/15 active:scale-[0.98]',
+        selected ? selectedChoiceClass(tone) : 'border-surface-border bg-surface-dim/70 text-ink-muted'
+      )}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  )
+}
+
+function selectedChoiceClass(tone: ChoiceTone) {
+  if (tone === 'liability') return 'border-danger-light bg-danger-light/75 text-danger shadow-[0_8px_20px_rgba(225,29,72,0.08)] focus:ring-danger/15'
+  if (tone === 'info') return 'border-info-light bg-info-light/80 text-info shadow-[0_8px_20px_rgba(59,130,246,0.08)] focus:ring-info/15'
+  if (tone === 'asset') return 'border-brand-light bg-brand-light/75 text-brand-dark shadow-[0_8px_20px_rgba(16,185,129,0.08)] focus:ring-brand/15'
+  return 'border-surface-border bg-white text-ink shadow-[0_8px_20px_rgba(36,53,47,0.06)] focus:ring-ink/10'
+}
+
+function selectedIconClass(tone: ChoiceTone) {
+  if (tone === 'liability') return 'bg-danger text-white'
+  if (tone === 'info') return 'bg-info text-white'
+  if (tone === 'asset') return 'bg-brand text-white'
+  return 'bg-ink text-white'
+}
+
+function getCategoryHint(option: (typeof CATEGORY_META)[number]) {
+  if (option.kind === 'liability') return '负债项目'
+  if (option.priorityForMonthlyConfirmation) return '月度重点'
+  if (option.stableByDefault) return '长期记录'
+  return '常规记录'
 }

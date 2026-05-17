@@ -21,6 +21,7 @@ export default function Monthly() {
   const endItem = useLedgerStore(state => state.endItem)
   const model = useSettingsStore(state => state.model)
   const monthlyReportAutoGenerate = useSettingsStore(state => state.monthlyReportAutoGenerate)
+  const hidden = useSettingsStore(state => state.privacy.hideAmounts)
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
   const month = currentMonthKey()
@@ -28,7 +29,7 @@ export default function Monthly() {
 
   const focusItems = useMemo(() => {
     return items.filter(item => {
-      if (item.status === 'draft') return false
+      if (item.status === 'draft' || item.status === 'ended') return false
       if (item.status === 'pending_confirmation') return true
       if (item.kind === 'liability') return true
       if (item.category === 'cash_accounts' || item.category === 'investments') return true
@@ -49,9 +50,14 @@ export default function Monthly() {
         </Card>
       )}
 
-      <Card className="p-4">
-        <h2 className="font-bold">本月重点项</h2>
-        <p className="mt-1 text-sm text-ink-muted">现金、投资、贷款和待确认记录会优先出现在这里。</p>
+      <Card className="border-brand-light bg-brand-light/35 p-3 shadow-none">
+        <div className="flex items-start gap-3">
+          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand" />
+          <div>
+            <h2 className="font-bold">本月重点项</h2>
+            <p className="mt-0.5 text-xs leading-5 text-ink-muted">现金、投资、贷款和待确认记录会优先出现在这里。</p>
+          </div>
+        </div>
       </Card>
 
       {!hasSnapshotRecords ? (
@@ -75,27 +81,33 @@ export default function Monthly() {
       ) : focusItems.length === 0 ? (
         <Card className="p-6 text-center text-sm text-ink-muted">暂无需要确认的项目。</Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {focusItems.map(item => {
             const shouldEnd = item.endMonth && compareMonth(item.endMonth, month) <= 0 && item.status === 'active'
+            const needsAction = item.status === 'pending_confirmation' || shouldEnd
             return (
-              <Card key={item.id} className="p-4">
+              <Card key={item.id} className="p-3">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-bold">{item.name}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-[15px] font-bold leading-tight">{item.name}</p>
                     <p className="mt-1 text-xs text-ink-muted">{getCategoryLabel(item.category)} · {getStatusLabel(item.status)}</p>
-                    {shouldEnd && <p className="mt-2 text-xs text-danger">可能已到结束月份，请确认。</p>}
+                    {shouldEnd && <p className="mt-1 text-xs text-danger">可能已到结束月份，请确认。</p>}
                   </div>
-                  <p className="font-black">{formatWan(item.amount)}</p>
+                  <p className={`shrink-0 text-right text-base font-black ${item.kind === 'liability' ? 'text-danger' : 'text-brand-dark'}`}>
+                    {item.kind === 'liability' ? '-' : '+'}
+                    {formatWan(item.amount, hidden)}
+                  </p>
                 </div>
-                <div className="mt-3 flex gap-2">
-                  {item.status === 'pending_confirmation' && (
-                    <Button size="sm" onClick={() => confirmItem(item.id)}>确认有效</Button>
-                  )}
-                  {shouldEnd && (
-                    <Button size="sm" variant="danger" onClick={() => endItem(item.id)}>确认结束</Button>
-                  )}
-                </div>
+                {needsAction && (
+                  <div className="mt-2 flex gap-2">
+                    {item.status === 'pending_confirmation' && (
+                      <Button size="sm" onClick={() => confirmItem(item.id)}>确认有效</Button>
+                    )}
+                    {shouldEnd && (
+                      <Button size="sm" variant="danger" onClick={() => endItem(item.id)}>确认结束</Button>
+                    )}
+                  </div>
+                )}
               </Card>
             )
           })}
@@ -142,15 +154,15 @@ export default function Monthly() {
           <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
             <div className="rounded-xl bg-surface-dark p-3">
               <p className="text-xs text-ink-muted">资产</p>
-              <b>{formatWan(latest.totals.totalAssets)}</b>
+              <b>{formatWan(latest.totals.totalAssets, hidden)}</b>
             </div>
             <div className="rounded-xl bg-[#f8f1f1] p-3">
               <p className="text-xs text-danger">负债</p>
-              <b>{formatWan(latest.totals.totalLiabilities)}</b>
+              <b>{formatWan(latest.totals.totalLiabilities, hidden)}</b>
             </div>
             <div className="rounded-xl bg-surface-dim p-3">
               <p className="text-xs text-ink-muted">净值</p>
-              <b>{formatWan(latest.totals.netWorth)}</b>
+              <b>{formatWan(latest.totals.netWorth, hidden)}</b>
             </div>
           </div>
         </Card>

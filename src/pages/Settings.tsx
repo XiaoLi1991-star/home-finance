@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, Database, Download, KeyRound, Shield, Upload, UserRound } from 'lucide-react'
+import { Bot, ChevronDown, Database, Download, KeyRound, Shield, Upload, UserRound } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
-import { downloadTextFile } from '@/lib/file'
+import { exportTextFile } from '@/lib/file'
 import { requestChatCompletion } from '@/lib/ai/modelClient'
 import { clearLaunchPin, hasLaunchPin, setLaunchPin } from '@/lib/native/launchProtection'
 import { clearAiApiKey, getAiApiKey, maskSecret, setAiApiKey } from '@/lib/native/secrets'
+import { cn } from '@/lib/utils'
 import { serializeV2Backup } from '@/lib/v2/backup'
 import { useLedgerStore } from '@/store/useLedgerStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
@@ -54,12 +55,13 @@ export default function Settings() {
     reports,
     drafts
   }), [drafts, histories, items, reports, snapshots])
+  const activeLedgerCount = useMemo(() => items.filter(item => item.status === 'active').length, [items])
 
   const saveKey = async () => {
     try {
       await setAiApiKey(apiKey)
       setSavedKeyLabel(maskSecret(apiKey))
-      setNotice({ tone: 'success', text: '访问密钥已保存到本机。' })
+      setNotice({ tone: 'success', text: '访问密钥已保存到原生安全存储。' })
     } catch (err) {
       setNotice({ tone: 'error', text: err instanceof Error ? err.message : '访问密钥保存失败。' })
     }
@@ -81,9 +83,21 @@ export default function Settings() {
     }
   }
 
-  const exportBackup = () => {
-    const stamp = new Date().toISOString().slice(0, 10)
-    downloadTextFile(`family-finance-v2-${stamp}.json`, serializeV2Backup(data))
+  const exportBackup = async () => {
+    try {
+      const stamp = new Date().toISOString().slice(0, 10)
+      const result = await exportTextFile(`family-finance-v2-${stamp}.json`, serializeV2Backup(data))
+      setNotice({
+        tone: 'success',
+        text: result.mode === 'downloaded'
+          ? '新版备份已开始下载。'
+          : result.mode === 'shared'
+            ? '新版备份已生成，请在系统面板里保存或分享。'
+            : '新版备份已保存到本机文档目录。'
+      })
+    } catch (err) {
+      setNotice({ tone: 'error', text: err instanceof Error ? err.message : '新版备份导出失败。' })
+    }
   }
 
   const savePin = async () => {
@@ -119,6 +133,10 @@ export default function Settings() {
 
   const currentYear = new Date().getFullYear()
   const profileAge = financialProfile.birthYear ? currentYear - financialProfile.birthYear : undefined
+  const profileSummary = financialProfile.birthYear || financialProfile.annualIncomeWan
+    ? `${profileAge && profileAge > 0 ? `${profileAge} 岁` : '年龄待填'} · ${financialProfile.annualIncomeWan ? '收入已填' : '收入待填'}`
+    : '待完善'
+  const privacySummary = `${privacy.hideAmounts ? '金额已隐藏' : '金额可见'} · ${privacy.launchProtectionEnabled ? 'PIN 已启用' : 'PIN 未启用'}`
 
   return (
     <div className="space-y-4 pb-24">
@@ -136,17 +154,17 @@ export default function Settings() {
           <h2 className="font-bold">数据状态</h2>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center text-sm">
-          <Metric label="台账" value={items.length} />
+          <Metric label="有效台账" value={activeLedgerCount} />
           <Metric label="快照" value={snapshots.length} />
           <Metric label="待确认" value={drafts.length} />
         </div>
       </Card>
 
-      <Card className="space-y-4 p-4">
-        <div className="flex items-center gap-2">
-          <UserRound className="h-5 w-5 text-info" />
-          <h2 className="font-bold">资产健康度参数</h2>
-        </div>
+      <SettingsSection
+        icon={<UserRound className="h-5 w-5 text-info" />}
+        title="资产健康度参数"
+        meta={profileSummary}
+      >
         <p className="text-sm leading-6 text-ink-muted">预期净资产 = 年龄 × 年收入 ÷ 10</p>
         <div className="grid grid-cols-2 gap-3">
           <Field label="出生年份">
@@ -177,18 +195,13 @@ export default function Settings() {
         <div className="rounded-lg bg-surface-dim p-3 text-sm text-ink-muted">
           当前年龄：{profileAge && profileAge > 0 ? `${profileAge} 岁` : '未计算'} · 年收入按家庭税前总收入填写
         </div>
-      </Card>
+      </SettingsSection>
 
-      <Card className="p-4">
-        <details>
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
-            <span className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-brand" />
-              <span className="font-bold">AI 接入设置</span>
-            </span>
-            <span className="text-xs text-ink-muted">{savedKeyLabel === '未设置' ? '未配置' : '已配置'}</span>
-          </summary>
-          <div className="mt-4 space-y-4">
+      <SettingsSection
+        icon={<Bot className="h-5 w-5 text-brand" />}
+        title="AI 接入设置"
+        meta={savedKeyLabel === '未设置' ? '未配置' : '已配置'}
+      >
             <Field label="服务地址">
               <input className="input" value={model.baseUrl} onChange={event => updateModel({ baseUrl: event.target.value })} />
             </Field>
@@ -253,15 +266,13 @@ export default function Settings() {
                 <Button variant="secondary" className="w-full" onClick={saveCustomHeaders}>保存更多参数</Button>
               </div>
             </details>
-          </div>
-        </details>
-      </Card>
+      </SettingsSection>
 
-      <Card className="space-y-3 p-4">
-        <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-brand" />
-          <h2 className="font-bold">隐私</h2>
-        </div>
+      <SettingsSection
+        icon={<Shield className="h-5 w-5 text-brand" />}
+        title="隐私"
+        meta={privacySummary}
+      >
         <Toggle label="隐藏金额" checked={privacy.hideAmounts} onChange={checked => updatePrivacy({ hideAmounts: checked })} />
         <Toggle label="后台模糊金额" checked={privacy.blurInBackground} onChange={checked => updatePrivacy({ blurInBackground: checked })} />
         <div className="rounded-lg bg-surface-dim p-3">
@@ -283,10 +294,13 @@ export default function Settings() {
           </div>
         </div>
         <Toggle label="月度确认后自动生成 AI 月报" checked={monthlyReportAutoGenerate} onChange={setMonthlyReportAutoGenerate} />
-      </Card>
+      </SettingsSection>
 
-      <Card className="space-y-3 p-4">
-        <h2 className="font-bold">备份与迁移</h2>
+      <SettingsSection
+        icon={<Upload className="h-5 w-5 text-brand" />}
+        title="备份与迁移"
+        meta="导出 / 导入"
+      >
         <Button className="w-full justify-start" onClick={exportBackup}>
           <Download className="h-4 w-4" />
           导出新版备份
@@ -297,7 +311,7 @@ export default function Settings() {
             导入备份 / 旧版迁移
           </Button>
         </Link>
-      </Card>
+      </SettingsSection>
     </div>
   )
 }
@@ -311,7 +325,43 @@ function Metric({ label, value }: { label: string; value: number }) {
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function SettingsSection({
+  icon,
+  title,
+  meta,
+  children,
+  defaultOpen = false
+}: {
+  icon: ReactNode
+  title: string
+  meta?: string
+  children: ReactNode
+  defaultOpen?: boolean
+}) {
+  return (
+    <Card className="p-0">
+      <details className="group" {...(defaultOpen ? { open: true } : {})}>
+        <summary className="flex min-h-[68px] cursor-pointer list-none items-center justify-between gap-3 p-4 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/15 [&::-webkit-details-marker]:hidden">
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-dim">
+              {icon}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate font-bold">{title}</span>
+              {meta && <span className="mt-0.5 block truncate text-xs text-ink-muted">{meta}</span>}
+            </span>
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-ink-muted transition group-open:rotate-180" />
+        </summary>
+        <div className="space-y-4 border-t border-surface-border/70 px-4 pb-4 pt-3">
+          {children}
+        </div>
+      </details>
+    </Card>
+  )
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block space-y-2">
       <span className="text-sm font-semibold text-ink-muted">{label}</span>
@@ -322,9 +372,22 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
   return (
-    <label className="flex items-center justify-between gap-3 rounded-lg bg-surface-dim p-3">
+    <label className="flex items-center justify-between gap-3 rounded-xl border border-surface-border/70 bg-surface-dim/80 p-3">
       <span className="text-sm font-semibold">{label}</span>
-      <input className="h-5 w-5 accent-brand" type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} />
+      <span
+        className={cn(
+          'relative h-7 w-12 shrink-0 rounded-full p-1 transition',
+          checked ? 'bg-brand shadow-[0_8px_18px_rgba(16,185,129,0.20)]' : 'bg-surface-border'
+        )}
+      >
+        <span
+          className={cn(
+            'block h-5 w-5 rounded-full bg-white shadow-sm transition-transform',
+            checked ? 'translate-x-5' : 'translate-x-0'
+          )}
+        />
+      </span>
+      <input className="sr-only" type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} />
     </label>
   )
 }

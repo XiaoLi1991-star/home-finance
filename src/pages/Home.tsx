@@ -5,7 +5,7 @@ import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
 import { calculateLedgerStats } from '@/lib/v2/calculations'
 import { calculateFamilyStatusScore } from '@/lib/v2/scoring'
-import { formatPercent, formatWan } from '@/lib/utils'
+import { formatPercent, formatWan, maskSensitiveNumbers } from '@/lib/utils'
 import { useLedgerStore } from '@/store/useLedgerStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
 
@@ -21,7 +21,7 @@ export default function Home() {
   const hasProfile = score.level !== 'missing_profile'
   const hasScore = hasActiveRecords && hasProfile && score.level !== 'empty'
   const statusTitle = hasScore ? score.title : hasProfile ? '还没有正式记录' : score.title
-  const statusScore = hasScore ? String(score.score) : '--'
+  const statusScore = hasScore ? (hidden ? '****' : String(score.score)) : '--'
   const statusReasons = hasScore
     ? score.reasons
     : !hasProfile
@@ -38,14 +38,14 @@ export default function Home() {
   const PrimaryActionIcon = primaryAction.icon
 
   return (
-    <div className="space-y-5 pb-24">
+    <div className="space-y-3 pb-24">
       <PageHeader title="家庭资产概览" subtitle="资产健康度、负债和本月要做的事" />
 
       <Card className="overflow-hidden bg-[linear-gradient(135deg,#ffffff_0%,#eef8f3_56%,#fbf1df_100%)] p-5 shadow-[0_18px_40px_rgba(36,53,47,0.10)]">
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm text-ink-muted">资产健康度</p>
-            <h2 className="mt-1 text-2xl font-black">{statusTitle}</h2>
+            <h2 className="mt-1 text-[22px] font-extrabold leading-tight text-[#243c35]">{statusTitle}</h2>
           </div>
           <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/80 bg-white/80 text-xl font-black text-brand-dark shadow-md shadow-brand/20">
             {statusScore}
@@ -55,7 +55,7 @@ export default function Home() {
         <div className="mt-5">
           <p className="text-xs text-ink-muted">家庭净资产</p>
           <div className="mt-1 flex items-center gap-2">
-            <p className="text-3xl font-black tracking-tight">{formatWan(stats.totals.netWorth, hidden)}</p>
+            <p className="text-[28px] font-extrabold leading-none text-[#20342f]">{formatWan(stats.totals.netWorth, hidden)}</p>
             <button
               type="button"
               className="rounded-full p-1.5 text-ink-muted active:bg-surface-dark"
@@ -94,7 +94,7 @@ export default function Home() {
               <div className="shrink-0 text-right">
                 <p className="text-xs text-ink-muted">达成进度</p>
                 <p className="mt-1 font-black text-info">
-                  {hidden ? '****' : `${Math.max(0, (score.accumulationRatio || 0) * 100).toFixed(1)}%`}
+                  {formatPercent(Math.max(0, score.accumulationRatio || 0), hidden)}
                 </p>
               </div>
             </div>
@@ -104,11 +104,11 @@ export default function Home() {
         <div className="mt-4 h-2 overflow-hidden rounded-full bg-surface-dark">
           <div
             className="h-full rounded-full bg-brand"
-            style={{ width: hasScore ? `${Math.min(100, Math.max(0, score.score))}%` : '0%' }}
+            style={{ width: hasScore && !hidden ? `${Math.min(100, Math.max(0, score.score))}%` : '0%' }}
           />
         </div>
         <p className="mt-2 text-xs text-ink-muted">
-          负债率 {hasScore ? formatPercent(stats.totals.debtRatio) : '--'} · 流动性 {hasScore ? formatPercent(stats.totals.liquidityRatio) : '--'}
+          负债率 {hasScore ? formatPercent(stats.totals.debtRatio, hidden) : '--'} · 流动性 {hasScore ? formatPercent(stats.totals.liquidityRatio, hidden) : '--'}
         </p>
       </Card>
 
@@ -155,7 +155,7 @@ export default function Home() {
         <div className="space-y-2">
           {statusReasons.map(reason => (
             <p key={reason} className="rounded-lg border border-surface-border bg-surface-dim px-3 py-2 text-sm text-ink-muted">
-              {reason}
+              {maskSensitiveNumbers(reason, hidden)}
             </p>
           ))}
         </div>

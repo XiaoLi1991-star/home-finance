@@ -54,7 +54,7 @@ describe('ledger calculations', () => {
     expect(score.expectedNetWorth).toBe(200)
     expect(score.accumulationRatio).toBe(1)
     expect(score.score).toBe(80)
-    expect(score.title).toBe('积累良好')
+    expect(score.title).toBe('积累节奏不错')
   })
 
   it('caps asset health score at 100 for twice expected net worth', () => {
@@ -66,7 +66,7 @@ describe('ledger calculations', () => {
 
     expect(score.accumulationRatio).toBeGreaterThan(2)
     expect(score.score).toBe(100)
-    expect(score.title).toBe('表现突出')
+    expect(score.title).toBe('家底很扎实')
   })
 
   it('does not produce a misleading score when totals are empty', () => {
@@ -75,7 +75,7 @@ describe('ledger calculations', () => {
 
     expect(score.level).toBe('empty')
     expect(score.score).toBe(0)
-    expect(score.title).toBe('还没有可计算数据')
+    expect(score.title).toBe('先记下家里的底数')
   })
 
   it('requires birth year and annual income before scoring', () => {
@@ -86,6 +86,6 @@ describe('ledger calculations', () => {
 
     expect(score.level).toBe('missing_profile')
     expect(score.score).toBe(0)
-    expect(score.title).toBe('先填写健康度参数')
+    expect(score.title).toBe('先补上家庭信息')
   })
 })

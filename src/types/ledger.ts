@@ -111,6 +111,13 @@ export interface AiReportSection {
   content: string
 }
 
+export interface AiReportImageCard {
+  generatedAt: string
+  backgroundDataUrl: string
+  prompt: string
+  model: string
+}
+
 export interface AiReport {
   id: string
   snapshotId: string
@@ -122,6 +129,7 @@ export interface AiReport {
   score?: number
   summary?: string
   sections: AiReportSection[]
+  imageCard?: AiReportImageCard
   disclaimer: string
   error?: string
 }

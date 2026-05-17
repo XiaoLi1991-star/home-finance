@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload } from 'lucide-react'
+import { FileText, Upload, UploadCloud } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
@@ -17,6 +17,7 @@ export default function MigrationWizard() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [confirmOverwrite, setConfirmOverwrite] = useState(false)
+  const [fileName, setFileName] = useState('')
 
   const preview = () => {
     setError('')
@@ -72,13 +73,26 @@ export default function MigrationWizard() {
       <Card className="space-y-4 p-4">
         <label className="block">
           <span className="text-sm font-semibold text-ink-muted">选择备份文件</span>
+          <span className="mt-2 flex min-h-[78px] items-center justify-between gap-3 rounded-2xl border border-dashed border-surface-border bg-surface-dim/70 p-3 transition active:bg-surface-dark">
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-brand shadow-[0_8px_20px_rgba(36,53,47,0.05)]">
+                {fileName ? <FileText className="h-5 w-5" /> : <UploadCloud className="h-5 w-5" />}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-bold text-ink">{fileName || '从本机选择 JSON 备份'}</span>
+                <span className="mt-0.5 block text-xs text-ink-muted">支持旧版或新版备份文件</span>
+              </span>
+            </span>
+            <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-brand-dark shadow-sm">选择</span>
+          </span>
           <input
-            className="mt-2 block w-full text-sm"
+            className="sr-only"
             type="file"
             accept="application/json,.json"
             onChange={async event => {
               const file = event.target.files?.[0]
               if (!file) return
+              setFileName(file.name)
               setText(await readFileAsText(file))
               setConfirmOverwrite(false)
             }}

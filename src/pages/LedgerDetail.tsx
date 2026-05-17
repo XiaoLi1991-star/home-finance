@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { CheckCircle2, Pencil, XCircle } from 'lucide-react'
+import { CheckCircle2, Pencil, Trash2, XCircle } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
 import { getCategoryLabel, getOwnerLabel, getStatusLabel, getSubTypeLabel } from '@/lib/v2/categories'
 import { formatWan } from '@/lib/utils'
 import { useLedgerStore } from '@/store/useLedgerStore'
+import { useSettingsStore } from '@/store/useSettingsStore'
 import type { ValuationChangeReason } from '@/types/ledger'
 
 const historyReasonLabels: Record<ValuationChangeReason, string> = {
@@ -21,12 +22,15 @@ export default function LedgerDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [confirmingEnd, setConfirmingEnd] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const items = useLedgerStore(state => state.items)
   const allHistories = useLedgerStore(state => state.histories)
+  const hidden = useSettingsStore(state => state.privacy.hideAmounts)
   const item = useMemo(() => items.find(entry => entry.id === id), [id, items])
   const histories = useMemo(() => allHistories.filter(history => history.itemId === id), [allHistories, id])
   const confirmItem = useLedgerStore(state => state.confirmItem)
   const endItem = useLedgerStore(state => state.endItem)
+  const deleteItem = useLedgerStore(state => state.deleteItem)
 
   if (!item) {
     return (
@@ -56,7 +60,7 @@ export default function LedgerDetail() {
         <p className="text-xs text-ink-muted">当前金额</p>
         <p className={`mt-1 text-3xl font-black ${item.kind === 'asset' ? 'text-brand-dark' : 'text-danger'}`}>
           {item.kind === 'asset' ? '+' : '-'}
-          {formatWan(item.amount)}
+          {formatWan(item.amount, hidden)}
         </p>
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
           <Info label="归属人" value={getOwnerLabel(item.owner)} />
@@ -106,6 +110,33 @@ export default function LedgerDetail() {
         </Card>
       )}
 
+      {!confirmingDelete && (
+        <Button variant="ghost" className="w-full text-danger" onClick={() => setConfirmingDelete(true)}>
+          <Trash2 className="h-4 w-4" />
+          删除记录
+        </Button>
+      )}
+
+      {confirmingDelete && (
+        <Card className="space-y-3 border-danger-light bg-danger-light p-4 text-sm text-[#8d4b4b]">
+          <p className="font-semibold">确认删除这条记录？</p>
+          <p>删除后，这条记录和它的金额变动历史会从本机移除。已生成的历史快照不会自动重算。</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="secondary" type="button" onClick={() => setConfirmingDelete(false)}>取消</Button>
+            <Button
+              variant="danger"
+              type="button"
+              onClick={() => {
+                deleteItem(item.id)
+                navigate('/ledger')
+              }}
+            >
+              确认删除
+            </Button>
+          </div>
+        </Card>
+      )}
+
       <details className="rounded-lg border border-surface-border bg-white p-4">
         <summary className="cursor-pointer font-bold">历史记录（默认归档）</summary>
         {histories.length === 0 ? (
@@ -116,7 +147,7 @@ export default function LedgerDetail() {
               <div key={history.id} className="rounded-xl bg-surface-dim p-3 text-sm">
                 <div className="flex justify-between">
                   <span>{history.month}</span>
-                  <b>{formatWan(history.amount)}</b>
+                  <b>{formatWan(history.amount, hidden)}</b>
                 </div>
                 <p className="mt-1 text-xs text-ink-muted">{historyReasonLabels[history.reason] || '金额更新'}</p>
               </div>
