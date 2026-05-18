@@ -1,12 +1,13 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useMemo, useState, type ReactNode } from 'react'
-import { ChevronDown, Share2 } from 'lucide-react'
+import { Check, ChevronDown, Share2 } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
 import {
   REPORT_BACKGROUND_STYLES,
   generateMonthlyReportBackground,
+  isReportBackgroundStyleAvailable,
   type ReportBackgroundStyleId
 } from '@/lib/ai/imageGeneration'
 import { createInsightsDemoData, isInsightsDemoMode } from '@/lib/demo/insightsDemo'
@@ -78,7 +79,8 @@ export default function Insights() {
   }
 
   function getBackgroundStyle(report: AiReport): ReportBackgroundStyleId {
-    return backgroundStyles[report.id] ?? inferBackgroundStyleFromPrompt(report.imageCard?.prompt) ?? 'marble'
+    const style = backgroundStyles[report.id] ?? inferBackgroundStyleFromPrompt(report.imageCard?.prompt)
+    return style && isReportBackgroundStyleAvailable(style) ? style : 'minimal'
   }
 
   async function handleGenerateBackground(report: AiReport) {
@@ -403,6 +405,7 @@ function BackgroundStyleSelect({
   value: ReportBackgroundStyleId
   onChange: (value: ReportBackgroundStyleId) => void
 }) {
+  const [open, setOpen] = useState(false)
   const selected = REPORT_BACKGROUND_STYLES.find(style => style.id === value) || REPORT_BACKGROUND_STYLES[0]
 
   return (
@@ -414,19 +417,67 @@ function BackgroundStyleSelect({
         </div>
         <span className="h-8 w-8 shrink-0 rounded-full border border-white/70 shadow-inner" style={{ background: selected.swatch }} />
       </div>
-      <label className="relative mt-3 block">
-        <select
-          className="h-11 w-full appearance-none rounded-xl border border-surface-border bg-white px-3 pr-10 text-sm font-bold text-ink outline-none transition focus:border-brand"
-          value={value}
-          onChange={event => onChange(event.target.value as ReportBackgroundStyleId)}
-        >
-          {REPORT_BACKGROUND_STYLES.map(style => (
-            <option key={style.id} value={style.id}>{style.label}</option>
-          ))}
-        </select>
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
-      </label>
+      <button
+        type="button"
+        className="mt-3 flex h-11 w-full items-center justify-between gap-3 rounded-xl border border-surface-border bg-white px-3 text-left text-sm font-bold text-ink shadow-[0_6px_14px_rgba(36,53,47,0.04)] transition active:bg-surface-dim"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="h-5 w-5 shrink-0 rounded-full border border-white/80 shadow-inner" style={{ background: selected.swatch }} />
+          <span className="truncate">{selected.label}</span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-ink-muted" />
+      </button>
       <p className="mt-2 text-xs leading-5 text-ink-muted">{selected.description}</p>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-end bg-ink/30 px-3 pb-3 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default"
+            aria-label="关闭背景风格选择"
+            onClick={() => setOpen(false)}
+          />
+          <div className="relative w-full overflow-hidden rounded-[24px] border border-white/70 bg-[#f8faf7] shadow-[0_18px_52px_rgba(24,37,31,0.22)]">
+            <div className="border-b border-surface-border/80 px-4 py-3">
+              <p className="text-sm font-black text-ink">选择背景风格</p>
+              <p className="mt-1 text-xs leading-5 text-ink-muted">这些模板会自动控制纹理密度和文字可读性。</p>
+            </div>
+            <div className="max-h-[64vh] space-y-2 overflow-y-auto p-3">
+              {REPORT_BACKGROUND_STYLES.map(style => {
+                const active = style.id === value
+                return (
+                  <button
+                    type="button"
+                    key={style.id}
+                    className={cn(
+                      'flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition',
+                      active
+                        ? 'border-brand-light bg-white shadow-[0_8px_20px_rgba(79,155,121,0.12)]'
+                        : 'border-transparent bg-white/62 active:bg-white'
+                    )}
+                    onClick={() => {
+                      onChange(style.id)
+                      setOpen(false)
+                    }}
+                  >
+                    <span className="h-12 w-12 shrink-0 rounded-2xl border border-white/80 shadow-inner" style={{ background: style.swatch }} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-black text-ink">{style.label}</span>
+                      <span className="mt-0.5 block text-xs leading-5 text-ink-muted">{style.description}</span>
+                    </span>
+                    <span className={cn('grid h-7 w-7 shrink-0 place-items-center rounded-full border', active ? 'border-brand bg-brand text-white' : 'border-surface-border bg-white text-transparent')}>
+                      <Check className="h-4 w-4" />
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
@@ -581,11 +632,10 @@ function findReportSnapshot(report: AiReport, snapshots: MonthlySnapshot[]) {
 
 function inferBackgroundStyleFromPrompt(prompt?: string): ReportBackgroundStyleId | undefined {
   if (!prompt) return undefined
-  if (prompt.includes('watercolor')) return 'watercolor'
-  if (prompt.includes('matte paper')) return 'paper'
-  if (prompt.includes('glass')) return 'glass'
-  if (prompt.includes('off-white') || prompt.includes('maximum readability')) return 'minimal'
-  if (prompt.includes('marble')) return 'marble'
+  if (prompt.includes('jade') || prompt.includes('watercolor')) return 'watercolor'
+  if (prompt.includes('coral') || prompt.includes('glass')) return 'glass'
+  if (prompt.includes('mint') || prompt.includes('off-white') || prompt.includes('maximum readability')) return 'minimal'
+  if (prompt.includes('champagne') || prompt.includes('marble')) return 'marble'
   return undefined
 }
 

@@ -28,35 +28,33 @@ export const REPORT_BACKGROUND_STYLES: ReadonlyArray<{
 }> = [
   {
     id: 'marble',
-    label: '温润大理石',
-    description: '浅石纹、低对比、适合正式分享',
-    swatch: 'linear-gradient(135deg, #f7faf4, #e5eee9 48%, #fbf6ec)'
+    label: '香槟石纹',
+    description: '暖白底色加少量金色石纹，正式又干净',
+    swatch: 'linear-gradient(135deg, #fff6de, #f9f1d6 46%, #ffffff)'
   },
   {
     id: 'watercolor',
-    label: '淡彩晕染',
-    description: '青绿和矿物蓝轻轻晕开，更柔和',
-    swatch: 'radial-gradient(circle at 28% 30%, #dbeee6, transparent 40%), radial-gradient(circle at 72% 64%, #dce8f7, transparent 42%), #fbfaf5'
-  },
-  {
-    id: 'paper',
-    label: '纸感雾面',
-    description: '细腻纸张颗粒，安静耐看',
-    swatch: 'linear-gradient(135deg, #fbf8f2, #edf5ef 55%, #f7fbff)'
+    label: '翡翠漆面',
+    description: '明亮翡翠主色，纹理少，视觉更有记忆点',
+    swatch: 'linear-gradient(135deg, #d8fff0, #16c38a 52%, #0c9f78)'
   },
   {
     id: 'glass',
-    label: '玻璃流光',
-    description: '轻玻璃层次，现代一点',
-    swatch: 'linear-gradient(135deg, #edf7f5, #e8eef9 45%, #f7f2ea)'
+    label: '珊瑚晶石',
+    description: '珊瑚粉和珍珠感，柔和但不寡淡',
+    swatch: 'linear-gradient(135deg, #fff0e9, #ff9b86 52%, #ffd8c9)'
   },
   {
     id: 'minimal',
-    label: '极简留白',
-    description: '最克制，优先保证文字阅读',
-    swatch: 'linear-gradient(135deg, #fafaf7, #f2f6f4 55%, #f8fafc)'
+    label: '薄荷珍珠',
+    description: '浅薄荷和珍珠白，最清爽、最易阅读',
+    swatch: 'linear-gradient(135deg, #ffffff, #d8f7e8 54%, #9de3bd)'
   }
 ]
+
+export function isReportBackgroundStyleAvailable(styleId: ReportBackgroundStyleId) {
+  return REPORT_BACKGROUND_STYLES.some(style => style.id === styleId)
+}
 
 export async function generateMonthlyReportBackground(options: {
   settings: ModelSettings
@@ -81,7 +79,7 @@ export async function generateMonthlyReportBackground(options: {
       aspect_ratio: '2:3',
       response_format: 'base64',
       n: 1,
-      prompt_optimizer: true,
+      prompt_optimizer: false,
       aigc_watermark: false,
       seed: createPositiveSeed(`${options.report.month}-${options.snapshot.id}-${prompt}-${Date.now()}`)
     })
@@ -120,39 +118,37 @@ function resolveMiniMaxImageGenerationUrl(baseUrl: string) {
 export function createMonthlyReportBackgroundPrompt(
   report: AiReport,
   snapshot: MonthlySnapshot,
-  styleId: ReportBackgroundStyleId = 'marble'
+  styleId: ReportBackgroundStyleId = 'minimal'
 ) {
-  const debtRatio = snapshot.totals.totalAssets > 0
-    ? Math.round((snapshot.totals.totalLiabilities / snapshot.totals.totalAssets) * 100)
-    : 0
   const style = getReportBackgroundStylePrompt(styleId)
   return [
-    'Create a premium vertical 2:3 background image for a Chinese family finance monthly report poster.',
-    'No text, no numbers, no letters, no logos, no watermark, no people, no realistic bank card, no QR code.',
-    'Elegant fintech editorial style with warm home-finance feeling, premium but quiet.',
+    'Create a full-bleed premium luxury brand abstract wallpaper background, vertical 2:3, for a Chinese family monthly report poster.',
+    'It must look like a flat high-end material surface, not a scene and not an object.',
     style,
-    'Use faint abstract ledger or line-chart motifs only as subtle background details.',
-    'Leave a calm readable center area and generous margins for app-rendered Chinese text overlay; avoid busy details behind text zones.',
-    'Palette: muted sage green, mineral blue, warm ivory, pale jade, tiny rose accent for risk, sophisticated and not cartoonish.',
-    'Texture should feel richer than a simple gradient but stay low contrast, gentle lighting, no harsh shadows.',
-    `Mood reference: ${report.month} monthly household balance, stable assets, debt ratio around ${debtRatio} percent.`
+    'Use one dominant saturated color, bright daylight exposure, high-key, fresh, expensive, elegant, beautiful.',
+    'The central 75 percent must be smooth, plain, low-detail and readable for app-rendered Chinese text overlay.',
+    'Texture is sparse and subtle, under 8 percent contrast, mostly edge-biased.',
+    'No text, no numbers, no letters, no logos, no watermark, no people, no QR code.',
+    'No chart, no graph, no lines, no data, no finance symbols, no icons, no realistic objects.',
+    'No flowers, leaves, plants, clouds, landscape, illustration, frames, borders, panels, rectangles, cards, circles, arcs, plate edges, fabric folds, ribbons, shadows, vignette, 3D shapes.',
+    'Avoid black, dark navy, dark gray, muddy brown, low-light scenes, busy patterns, and dramatic shadows.'
   ].join(' ')
 }
 
 function getReportBackgroundStylePrompt(styleId: ReportBackgroundStyleId) {
   if (styleId === 'watercolor') {
-    return 'Style direction: subtle watercolor diffusion, pale jade and mineral blue softly bleeding into warm ivory, airy and calm.'
+    return 'Dominant color: vivid jade green, bright and high-key. Flat lacquer wallpaper surface with faint tonal grain and a few soft cloudy shifts, no folds.'
   }
   if (styleId === 'paper') {
-    return 'Style direction: refined matte paper texture, soft grain, warm ivory surface, quiet editorial finance stationery feeling.'
+    return 'Dominant color: saturated clean cobalt blue with cyan highlights, bright not dark. Flat enamel wallpaper surface with tiny pearlescent speckles, no circles.'
   }
   if (styleId === 'glass') {
-    return 'Style direction: translucent glass layers, soft reflections, frosted panels, modern premium fintech atmosphere.'
+    return 'Dominant color: clear coral rose. Flat rose quartz wallpaper texture with very soft mineral bloom and rare pale veins near edges, no flower shapes.'
   }
   if (styleId === 'minimal') {
-    return 'Style direction: restrained warm off-white background, very light texture, generous empty space, maximum readability.'
+    return 'Dominant color: fresh mint green and pearl ivory. Flat pearlescent wallpaper surface with soft luminous grain, minimal accent at the edge.'
   }
-  return 'Style direction: refined white marble texture, delicate low-contrast veins, warm ivory stone, premium and quiet.'
+  return 'Dominant color: warm champagne ivory. Flat luxury stone wallpaper, sparse thin champagne-gold mineral veins only near the left or right edge, center clean.'
 }
 
 async function readMiniMaxImageDataUrl(payload: MiniMaxImageGenerationResponse) {
