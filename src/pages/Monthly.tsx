@@ -9,6 +9,7 @@ import { getAiApiKey } from '@/lib/native/secrets'
 import { getCategoryLabel, getStatusLabel } from '@/lib/v2/categories'
 import { compareMonth, currentMonthKey } from '@/lib/v2/migration'
 import { formatWan } from '@/lib/utils'
+import { releaseScreenWakeLock, requestScreenWakeLock } from '@/lib/wakeLock'
 import { useLedgerStore } from '@/store/useLedgerStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
 
@@ -47,6 +48,17 @@ export default function Monthly() {
       {notice && (
         <Card className={`p-3 text-sm ${notice.tone === 'error' ? 'border-danger-light bg-danger-light text-danger' : 'text-ink-muted'}`}>
           {notice.text}
+        </Card>
+      )}
+
+      {monthlyReportAutoGenerate && (
+        <Card className={`p-3 text-sm shadow-none ${saving ? 'border-brand-light bg-brand-light/45 text-brand-dark' : 'border-surface-dark bg-white/70 text-ink-muted'}`}>
+          <p className="font-semibold text-ink">生成 AI 月报时请保持 App 在前台</p>
+          <p className="mt-1 leading-5">
+            {saving
+              ? '正在生成月报和背景图，请先不要锁屏、切到后台或退出页面。'
+              : '月报生成会调用模型服务，锁屏或切到后台时手机可能暂停网络请求。'}
+          </p>
         </Card>
       )}
 
@@ -122,6 +134,7 @@ export default function Monthly() {
           if (!hasSnapshotRecords) return
           setSaving(true)
           const snapshot = createSnapshot(month)
+          const wakeLock = monthlyReportAutoGenerate ? await requestScreenWakeLock() : null
           try {
             if (monthlyReportAutoGenerate) {
               const apiKey = await getAiApiKey()
@@ -141,11 +154,12 @@ export default function Monthly() {
             addReport(createFailedReport(snapshot, err instanceof Error ? err.message : 'AI 月报生成失败。'))
             setNotice({ tone: 'error', text: `已生成 ${snapshot.month} 月度快照。AI 月报生成失败，可在洞察里查看记录。` })
           } finally {
+            await releaseScreenWakeLock(wakeLock)
             setSaving(false)
           }
         }}
       >
-        {saving ? '处理中...' : hasSnapshotRecords ? '生成本月快照' : '先添加记录再生成快照'}
+        {saving ? '生成中，请保持前台...' : hasSnapshotRecords ? '生成本月快照' : '先添加记录再生成快照'}
       </Button>
 
       {latest && (
