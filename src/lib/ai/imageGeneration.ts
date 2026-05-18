@@ -18,16 +18,57 @@ interface MiniMaxImageGenerationResponse {
   message?: string
 }
 
+export type ReportBackgroundStyleId = 'marble' | 'watercolor' | 'paper' | 'glass' | 'minimal'
+
+export const REPORT_BACKGROUND_STYLES: ReadonlyArray<{
+  id: ReportBackgroundStyleId
+  label: string
+  description: string
+  swatch: string
+}> = [
+  {
+    id: 'marble',
+    label: '温润大理石',
+    description: '浅石纹、低对比、适合正式分享',
+    swatch: 'linear-gradient(135deg, #f7faf4, #e5eee9 48%, #fbf6ec)'
+  },
+  {
+    id: 'watercolor',
+    label: '淡彩晕染',
+    description: '青绿和矿物蓝轻轻晕开，更柔和',
+    swatch: 'radial-gradient(circle at 28% 30%, #dbeee6, transparent 40%), radial-gradient(circle at 72% 64%, #dce8f7, transparent 42%), #fbfaf5'
+  },
+  {
+    id: 'paper',
+    label: '纸感雾面',
+    description: '细腻纸张颗粒，安静耐看',
+    swatch: 'linear-gradient(135deg, #fbf8f2, #edf5ef 55%, #f7fbff)'
+  },
+  {
+    id: 'glass',
+    label: '玻璃流光',
+    description: '轻玻璃层次，现代一点',
+    swatch: 'linear-gradient(135deg, #edf7f5, #e8eef9 45%, #f7f2ea)'
+  },
+  {
+    id: 'minimal',
+    label: '极简留白',
+    description: '最克制，优先保证文字阅读',
+    swatch: 'linear-gradient(135deg, #fafaf7, #f2f6f4 55%, #f8fafc)'
+  }
+]
+
 export async function generateMonthlyReportBackground(options: {
   settings: ModelSettings
   apiKey: string
   report: AiReport
   snapshot: MonthlySnapshot
   prompt?: string
+  styleId?: ReportBackgroundStyleId
 }): Promise<AiReportImageCard> {
   if (!options.apiKey.trim()) throw new Error('请先填写访问密钥。')
 
-  const prompt = options.prompt?.trim() || createMonthlyReportBackgroundPrompt(options.report, options.snapshot)
+  const prompt = options.prompt?.trim() || createMonthlyReportBackgroundPrompt(options.report, options.snapshot, options.styleId)
   const response = await fetch(resolveMiniMaxImageGenerationUrl(options.settings.baseUrl), {
     method: 'POST',
     headers: {
@@ -76,20 +117,42 @@ function resolveMiniMaxImageGenerationUrl(baseUrl: string) {
   }
 }
 
-export function createMonthlyReportBackgroundPrompt(report: AiReport, snapshot: MonthlySnapshot) {
+export function createMonthlyReportBackgroundPrompt(
+  report: AiReport,
+  snapshot: MonthlySnapshot,
+  styleId: ReportBackgroundStyleId = 'marble'
+) {
   const debtRatio = snapshot.totals.totalAssets > 0
     ? Math.round((snapshot.totals.totalLiabilities / snapshot.totals.totalAssets) * 100)
     : 0
+  const style = getReportBackgroundStylePrompt(styleId)
   return [
     'Create a premium vertical 2:3 background image for a Chinese family finance monthly report poster.',
     'No text, no numbers, no letters, no logos, no watermark, no people, no realistic bank card, no QR code.',
     'Elegant fintech editorial style with warm home-finance feeling, premium but quiet.',
-    'Use refined white marble texture, translucent glass layers, soft paper grain, subtle watercolor diffusion, and faint abstract ledger or line-chart motifs.',
+    style,
+    'Use faint abstract ledger or line-chart motifs only as subtle background details.',
     'Leave a calm readable center area and generous margins for app-rendered Chinese text overlay; avoid busy details behind text zones.',
     'Palette: muted sage green, mineral blue, warm ivory, pale jade, tiny rose accent for risk, sophisticated and not cartoonish.',
-    'Texture should feel richer than a simple gradient: marble veins should be delicate and low-contrast, colors softly bleeding into each other, gentle lighting, no harsh shadows.',
+    'Texture should feel richer than a simple gradient but stay low contrast, gentle lighting, no harsh shadows.',
     `Mood reference: ${report.month} monthly household balance, stable assets, debt ratio around ${debtRatio} percent.`
   ].join(' ')
+}
+
+function getReportBackgroundStylePrompt(styleId: ReportBackgroundStyleId) {
+  if (styleId === 'watercolor') {
+    return 'Style direction: subtle watercolor diffusion, pale jade and mineral blue softly bleeding into warm ivory, airy and calm.'
+  }
+  if (styleId === 'paper') {
+    return 'Style direction: refined matte paper texture, soft grain, warm ivory surface, quiet editorial finance stationery feeling.'
+  }
+  if (styleId === 'glass') {
+    return 'Style direction: translucent glass layers, soft reflections, frosted panels, modern premium fintech atmosphere.'
+  }
+  if (styleId === 'minimal') {
+    return 'Style direction: restrained warm off-white background, very light texture, generous empty space, maximum readability.'
+  }
+  return 'Style direction: refined white marble texture, delicate low-contrast veins, warm ivory stone, premium and quiet.'
 }
 
 async function readMiniMaxImageDataUrl(payload: MiniMaxImageGenerationResponse) {

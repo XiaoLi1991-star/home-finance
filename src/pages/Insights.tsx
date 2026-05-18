@@ -4,7 +4,11 @@ import { ChevronDown, Share2 } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
-import { createMonthlyReportBackgroundPrompt, generateMonthlyReportBackground } from '@/lib/ai/imageGeneration'
+import {
+  REPORT_BACKGROUND_STYLES,
+  generateMonthlyReportBackground,
+  type ReportBackgroundStyleId
+} from '@/lib/ai/imageGeneration'
 import { createInsightsDemoData, isInsightsDemoMode } from '@/lib/demo/insightsDemo'
 import { getAiApiKey } from '@/lib/native/secrets'
 import {
@@ -31,7 +35,7 @@ export default function Insights() {
   const [generatingBackgroundId, setGeneratingBackgroundId] = useState<string | null>(null)
   const [cardError, setCardError] = useState<{ id: string; text: string } | null>(null)
   const [backgroundError, setBackgroundError] = useState<{ id: string; text: string } | null>(null)
-  const [backgroundPrompts, setBackgroundPrompts] = useState<Record<string, string>>({})
+  const [backgroundStyles, setBackgroundStyles] = useState<Record<string, ReportBackgroundStyleId>>({})
   const demoMode = isInsightsDemoMode()
   const demoData = useMemo(() => demoMode ? createInsightsDemoData() : null, [demoMode])
   const items = demoData?.items ?? storedItems
@@ -73,10 +77,8 @@ export default function Insights() {
     }
   }
 
-  function getBackgroundPrompt(report: AiReport) {
-    const snapshot = findReportSnapshot(report, snapshots)
-    if (!snapshot) return backgroundPrompts[report.id] ?? report.imageCard?.prompt ?? ''
-    return backgroundPrompts[report.id] ?? report.imageCard?.prompt ?? createMonthlyReportBackgroundPrompt(report, snapshot)
+  function getBackgroundStyle(report: AiReport): ReportBackgroundStyleId {
+    return backgroundStyles[report.id] ?? inferBackgroundStyleFromPrompt(report.imageCard?.prompt) ?? 'marble'
   }
 
   async function handleGenerateBackground(report: AiReport) {
@@ -99,10 +101,9 @@ export default function Insights() {
         apiKey,
         report,
         snapshot,
-        prompt: getBackgroundPrompt(report)
+        styleId: getBackgroundStyle(report)
       })
       addReport({ ...report, imageCard })
-      setBackgroundPrompts(state => ({ ...state, [report.id]: imageCard.prompt }))
     } catch (err) {
       setBackgroundError({ id: report.id, text: err instanceof Error ? err.message : '背景图生成失败。' })
     } finally {
@@ -142,11 +143,11 @@ export default function Insights() {
                 generatingBackgroundId={generatingBackgroundId}
                 cardError={cardError}
                 backgroundError={backgroundError}
-                backgroundPrompt={getBackgroundPrompt(latestReport)}
+                backgroundStyle={getBackgroundStyle(latestReport)}
                 demoMode={demoMode}
                 onShare={handleShareImageCard}
                 onGenerateBackground={handleGenerateBackground}
-                onPromptChange={(value) => setBackgroundPrompts(state => ({ ...state, [latestReport.id]: value }))}
+                onStyleChange={(value) => setBackgroundStyles(state => ({ ...state, [latestReport.id]: value }))}
                 featured
               />
             )}
@@ -171,11 +172,11 @@ export default function Insights() {
                       generatingBackgroundId={generatingBackgroundId}
                       cardError={cardError}
                       backgroundError={backgroundError}
-                      backgroundPrompt={getBackgroundPrompt(report)}
+                      backgroundStyle={getBackgroundStyle(report)}
                       demoMode={demoMode}
                       onShare={handleShareImageCard}
                       onGenerateBackground={handleGenerateBackground}
-                      onPromptChange={(value) => setBackgroundPrompts(state => ({ ...state, [report.id]: value }))}
+                      onStyleChange={(value) => setBackgroundStyles(state => ({ ...state, [report.id]: value }))}
                     />
                   ))}
                 </div>
@@ -308,11 +309,11 @@ function ReportPanel({
   generatingBackgroundId,
   cardError,
   backgroundError,
-  backgroundPrompt,
+  backgroundStyle,
   demoMode,
   onShare,
   onGenerateBackground,
-  onPromptChange,
+  onStyleChange,
   featured = false
 }: {
   report: AiReport
@@ -322,11 +323,11 @@ function ReportPanel({
   generatingBackgroundId: string | null
   cardError: { id: string; text: string } | null
   backgroundError: { id: string; text: string } | null
-  backgroundPrompt: string
+  backgroundStyle: ReportBackgroundStyleId
   demoMode: boolean
   onShare: (report: AiReport) => void
   onGenerateBackground: (report: AiReport) => void
-  onPromptChange: (value: string) => void
+  onStyleChange: (value: ReportBackgroundStyleId) => void
   featured?: boolean
 }) {
   const snapshot = findReportSnapshot(report, snapshots)
@@ -346,11 +347,11 @@ function ReportPanel({
           generatingBackgroundId={generatingBackgroundId}
           cardError={cardError}
           backgroundError={backgroundError}
-          backgroundPrompt={backgroundPrompt}
+          backgroundStyle={backgroundStyle}
           demoMode={demoMode}
           onShare={onShare}
           onGenerateBackground={onGenerateBackground}
-          onPromptChange={onPromptChange}
+          onStyleChange={onStyleChange}
         />
       </details>
     )
@@ -367,11 +368,11 @@ function ReportPanel({
         generatingBackgroundId={generatingBackgroundId}
         cardError={cardError}
         backgroundError={backgroundError}
-        backgroundPrompt={backgroundPrompt}
+        backgroundStyle={backgroundStyle}
         demoMode={demoMode}
         onShare={onShare}
         onGenerateBackground={onGenerateBackground}
-        onPromptChange={onPromptChange}
+        onStyleChange={onStyleChange}
       />
     </section>
   )
@@ -395,6 +396,41 @@ function ReportHeader({ report, featured = false }: { report: AiReport; featured
   )
 }
 
+function BackgroundStyleSelect({
+  value,
+  onChange
+}: {
+  value: ReportBackgroundStyleId
+  onChange: (value: ReportBackgroundStyleId) => void
+}) {
+  const selected = REPORT_BACKGROUND_STYLES.find(style => style.id === value) || REPORT_BACKGROUND_STYLES[0]
+
+  return (
+    <section className="rounded-2xl border border-surface-border bg-white/70 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-bold">背景风格</h3>
+          <p className="mt-0.5 text-xs leading-5 text-ink-muted">选择一种风格，系统会自动处理可读性提示词。</p>
+        </div>
+        <span className="h-8 w-8 shrink-0 rounded-full border border-white/70 shadow-inner" style={{ background: selected.swatch }} />
+      </div>
+      <label className="relative mt-3 block">
+        <select
+          className="h-11 w-full appearance-none rounded-xl border border-surface-border bg-white px-3 pr-10 text-sm font-bold text-ink outline-none transition focus:border-brand"
+          value={value}
+          onChange={event => onChange(event.target.value as ReportBackgroundStyleId)}
+        >
+          {REPORT_BACKGROUND_STYLES.map(style => (
+            <option key={style.id} value={style.id}>{style.label}</option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+      </label>
+      <p className="mt-2 text-xs leading-5 text-ink-muted">{selected.description}</p>
+    </section>
+  )
+}
+
 function ReportPanelBody({
   report,
   snapshot,
@@ -403,11 +439,11 @@ function ReportPanelBody({
   generatingBackgroundId,
   cardError,
   backgroundError,
-  backgroundPrompt,
+  backgroundStyle,
   demoMode,
   onShare,
   onGenerateBackground,
-  onPromptChange
+  onStyleChange
 }: {
   report: AiReport
   snapshot?: MonthlySnapshot
@@ -416,11 +452,11 @@ function ReportPanelBody({
   generatingBackgroundId: string | null
   cardError: { id: string; text: string } | null
   backgroundError: { id: string; text: string } | null
-  backgroundPrompt: string
+  backgroundStyle: ReportBackgroundStyleId
   demoMode: boolean
   onShare: (report: AiReport) => void
   onGenerateBackground: (report: AiReport) => void
-  onPromptChange: (value: string) => void
+  onStyleChange: (value: ReportBackgroundStyleId) => void
 }) {
   if (report.error) {
     return <p className="mt-3 text-sm text-danger">{report.error}</p>
@@ -431,23 +467,7 @@ function ReportPanelBody({
       {snapshot && (
         <ReportImageCard report={report} snapshot={snapshot} hidden={hidden} />
       )}
-      <details className="group rounded-2xl border border-surface-border bg-white/70 p-3" open={!report.imageCard}>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-bold [&::-webkit-details-marker]:hidden">
-          <span>背景提示词</span>
-          <span className="flex items-center gap-1 text-xs text-ink-muted">
-            可修改
-            <ChevronDown className="h-4 w-4 transition group-open:rotate-180" />
-          </span>
-        </summary>
-        <textarea
-          className="mt-3 min-h-32 w-full resize-y rounded-2xl border border-surface-border bg-white/80 p-3 text-xs leading-5 text-ink outline-none transition focus:border-brand"
-          value={backgroundPrompt}
-          onChange={event => onPromptChange(event.target.value)}
-        />
-        <p className="mt-2 text-xs leading-5 text-ink-muted">
-          建议保留“无文字、留出可读区域、低对比纹理”等限制，只微调大理石、淡彩、纸张颗粒这些风格词。
-        </p>
-      </details>
+      <BackgroundStyleSelect value={backgroundStyle} onChange={onStyleChange} />
       <div className="flex flex-wrap gap-2">
         <Button
           size="sm"
@@ -557,6 +577,16 @@ function PreviewSection({ title, items, color }: { title: string; items: string[
 function findReportSnapshot(report: AiReport, snapshots: MonthlySnapshot[]) {
   return snapshots.find(snapshot => snapshot.id === report.snapshotId)
     || snapshots.find(snapshot => snapshot.month === report.month)
+}
+
+function inferBackgroundStyleFromPrompt(prompt?: string): ReportBackgroundStyleId | undefined {
+  if (!prompt) return undefined
+  if (prompt.includes('watercolor')) return 'watercolor'
+  if (prompt.includes('matte paper')) return 'paper'
+  if (prompt.includes('glass')) return 'glass'
+  if (prompt.includes('off-white') || prompt.includes('maximum readability')) return 'minimal'
+  if (prompt.includes('marble')) return 'marble'
+  return undefined
 }
 
 function getCategoryTone(category: LedgerCategory) {
