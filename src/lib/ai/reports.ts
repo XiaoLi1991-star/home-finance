@@ -1,6 +1,7 @@
 import { requestChatCompletion } from './modelClient'
 import { monthlyReportMessages } from './prompts'
 import { buildPrivacySummary } from './privacy'
+import { generateMonthlyReportBackground } from './imageGeneration'
 import { createLedgerId } from '@/lib/v2/migration'
 import type { AiReport, LedgerItem, ModelSettings, MonthlySnapshot } from '@/types/ledger'
 
@@ -53,7 +54,7 @@ export async function generateMonthlyAiReport(options: {
   )
 
   const sections = parseReportSections(result.content)
-  return {
+  const report: AiReport = {
     id: createLedgerId('report'),
     snapshotId: options.snapshot.id,
     month: options.snapshot.month,
@@ -65,4 +66,17 @@ export async function generateMonthlyAiReport(options: {
     sections,
     disclaimer: 'AI 内容仅用于家庭复盘参考，不构成投资、法律或税务建议。'
   }
+
+  try {
+    report.imageCard = await generateMonthlyReportBackground({
+      settings: options.settings,
+      apiKey: options.apiKey,
+      report,
+      snapshot: options.snapshot
+    })
+  } catch {
+    // 背景图是增强体验，不让它影响月报文本生成。
+  }
+
+  return report
 }

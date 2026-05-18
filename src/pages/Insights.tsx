@@ -1,25 +1,42 @@
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useMemo, useState, type ReactNode } from 'react'
-import { Share2 } from 'lucide-react'
+import { ChevronDown, Share2 } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
-import { REPORT_CARD_TEMPLATES, shareMonthlyReportCardImage, type ReportCardTemplateId } from '@/lib/reportCardImage'
-import { buildTrendFromSnapshots, calculateLedgerStats } from '@/lib/v2/calculations'
+import { createMonthlyReportBackgroundPrompt, generateMonthlyReportBackground } from '@/lib/ai/imageGeneration'
+import { createInsightsDemoData, isInsightsDemoMode } from '@/lib/demo/insightsDemo'
+import { getAiApiKey } from '@/lib/native/secrets'
+import {
+  getReportCardContent,
+  getReportCardPreviewTheme,
+  getReportSeed,
+  shareMonthlyReportCardImage
+} from '@/lib/reportCardImage'
+import { buildTrendFromSnapshots, calculateLedgerStats, type TrendPoint } from '@/lib/v2/calculations'
 import { getCategoryLabel } from '@/lib/v2/categories'
 import { cn, formatDateTimeLabel, formatPercent, formatWan, maskSensitiveNumbers } from '@/lib/utils'
 import { useLedgerStore } from '@/store/useLedgerStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
-import type { AiReport, MonthlySnapshot } from '@/types/ledger'
+import type { AiReport, LedgerCategory, MonthlySnapshot } from '@/types/ledger'
 
 export default function Insights() {
-  const items = useLedgerStore(state => state.items)
-  const snapshots = useLedgerStore(state => state.snapshots)
-  const reports = useLedgerStore(state => state.reports)
+  const storedItems = useLedgerStore(state => state.items)
+  const storedSnapshots = useLedgerStore(state => state.snapshots)
+  const storedReports = useLedgerStore(state => state.reports)
+  const addReport = useLedgerStore(state => state.addReport)
+  const model = useSettingsStore(state => state.model)
   const hidden = useSettingsStore(state => state.privacy.hideAmounts)
   const [sharingCardId, setSharingCardId] = useState<string | null>(null)
+  const [generatingBackgroundId, setGeneratingBackgroundId] = useState<string | null>(null)
   const [cardError, setCardError] = useState<{ id: string; text: string } | null>(null)
-  const [selectedTemplate, setSelectedTemplate] = useState<ReportCardTemplateId>('family')
+  const [backgroundError, setBackgroundError] = useState<{ id: string; text: string } | null>(null)
+  const [backgroundPrompts, setBackgroundPrompts] = useState<Record<string, string>>({})
+  const demoMode = isInsightsDemoMode()
+  const demoData = useMemo(() => demoMode ? createInsightsDemoData() : null, [demoMode])
+  const items = demoData?.items ?? storedItems
+  const snapshots = demoData?.snapshots ?? storedSnapshots
+  const reports = demoData?.reports ?? storedReports
   const stats = calculateLedgerStats(items)
   const trend = buildTrendFromSnapshots(snapshots)
   const visibleReports = useMemo(() => {
@@ -30,8 +47,10 @@ export default function Insights() {
       return true
     })
   }, [reports])
+  const latestReport = visibleReports[0]
+  const archivedReports = visibleReports.slice(1)
   const categoryRows = Object.entries(stats.byCategory)
-    .map(([category, amount]) => ({ category, label: getCategoryLabel(category as keyof typeof stats.byCategory), amount }))
+    .map(([category, amount]) => ({ category: category as LedgerCategory, label: getCategoryLabel(category as LedgerCategory), amount }))
     .filter(row => row.amount > 0)
     .sort((a, b) => b.amount - a.amount)
   const maxCategory = Math.max(...categoryRows.map(row => row.amount), 1)
@@ -46,7 +65,7 @@ export default function Insights() {
     setSharingCardId(report.id)
     setCardError(null)
     try {
-      await shareMonthlyReportCardImage({ report, snapshot, hidden, template: selectedTemplate })
+      await shareMonthlyReportCardImage({ report, snapshot, hidden })
     } catch (err) {
       setCardError({ id: report.id, text: err instanceof Error ? err.message : '分享图片生成失败。' })
     } finally {
@@ -54,54 +73,115 @@ export default function Insights() {
     }
   }
 
+  function getBackgroundPrompt(report: AiReport) {
+    const snapshot = findReportSnapshot(report, snapshots)
+    if (!snapshot) return backgroundPrompts[report.id] ?? report.imageCard?.prompt ?? ''
+    return backgroundPrompts[report.id] ?? report.imageCard?.prompt ?? createMonthlyReportBackgroundPrompt(report, snapshot)
+  }
+
+  async function handleGenerateBackground(report: AiReport) {
+    const snapshot = findReportSnapshot(report, snapshots)
+    if (!snapshot) {
+      setBackgroundError({ id: report.id, text: '这份月报缺少对应快照，暂时不能生成背景。' })
+      return
+    }
+    if (demoMode) {
+      setBackgroundError({ id: report.id, text: '演示模式只用于预览，不会调用 MiniMax 生成图片。' })
+      return
+    }
+
+    setGeneratingBackgroundId(report.id)
+    setBackgroundError(null)
+    try {
+      const apiKey = await getAiApiKey()
+      const imageCard = await generateMonthlyReportBackground({
+        settings: model,
+        apiKey,
+        report,
+        snapshot,
+        prompt: getBackgroundPrompt(report)
+      })
+      addReport({ ...report, imageCard })
+      setBackgroundPrompts(state => ({ ...state, [report.id]: imageCard.prompt }))
+    } catch (err) {
+      setBackgroundError({ id: report.id, text: err instanceof Error ? err.message : '背景图生成失败。' })
+    } finally {
+      setGeneratingBackgroundId(null)
+    }
+  }
+
   return (
     <div className="space-y-4 pb-24">
-      <PageHeader title="洞察" subtitle="走势、结构和月报会集中在这里" />
+      <PageHeader title="洞察" subtitle={demoMode ? '两年演示数据，仅用于预览走势效果' : '先看趋势，再看月报和结构'} />
+
+      <TrendCard trend={trend} hidden={hidden} demoMode={demoMode} />
 
       <Card className="p-4">
-        <h2 className="font-bold">当前结构</h2>
-        <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-          <Metric label="资产" value={formatWan(stats.totals.totalAssets, hidden)} />
-          <Metric label="负债" value={formatWan(stats.totals.totalLiabilities, hidden)} />
-          <Metric label="净资产" value={formatWan(stats.totals.netWorth, hidden)} />
-          <Metric label="负债率" value={formatPercent(stats.totals.debtRatio, hidden)} />
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-bold">AI 月报</h2>
+            <p className="mt-1 text-xs leading-5 text-ink-muted">最新月报默认展开，历史月份会先收起来。</p>
+          </div>
+          {visibleReports.length > 0 && (
+            <span className="rounded-full bg-surface-dim px-2.5 py-1 text-[11px] font-bold text-ink-muted">
+              {visibleReports.length} 份
+            </span>
+          )}
         </div>
-      </Card>
 
-      <Card className="p-4">
-        <h2 className="font-bold">资产负债走势</h2>
-        {hidden ? (
-          <p className="mt-3 rounded-xl bg-surface-dim p-3 text-sm text-ink-muted">隐私模式已隐藏走势图和趋势数值。</p>
-        ) : trend.length === 0 ? (
-          <p className="mt-3 text-sm text-ink-muted">生成月度快照后，这里会显示资产、负债、净资产走势。</p>
+        {visibleReports.length === 0 ? (
+          <p className="mt-3 text-sm text-ink-muted">在设置里开启自动月报后，月度确认会生成 AI 报告。</p>
         ) : (
-          <>
-            <div className="mt-3 h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trend} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#76877e' }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#76877e' }} tickLine={false} axisLine={false} width={48} />
-                  <Tooltip formatter={(value) => formatWan(Number(value), hidden)} />
-                  <Line type="monotone" dataKey="totalAssets" name="资产" stroke="#4f9b79" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="totalLiabilities" name="负债" stroke="#b65d5d" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="netWorth" name="净资产" stroke="#486c9f" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-3 space-y-2">
-              {trend.slice(-3).map(point => (
-                <div key={point.month} className="rounded-lg bg-surface-dim p-3 text-sm">
-                  <div className="flex justify-between font-bold">
-                    <span>{point.month}</span>
-                    <span>{formatWan(point.netWorth, hidden)}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-ink-muted">
-                    资产 {formatWan(point.totalAssets, hidden)} · 负债 {formatWan(point.totalLiabilities, hidden)}
-                  </p>
+          <div className="mt-3 space-y-3">
+            {latestReport && (
+              <ReportPanel
+                report={latestReport}
+                snapshots={snapshots}
+                hidden={hidden}
+                sharingCardId={sharingCardId}
+                generatingBackgroundId={generatingBackgroundId}
+                cardError={cardError}
+                backgroundError={backgroundError}
+                backgroundPrompt={getBackgroundPrompt(latestReport)}
+                demoMode={demoMode}
+                onShare={handleShareImageCard}
+                onGenerateBackground={handleGenerateBackground}
+                onPromptChange={(value) => setBackgroundPrompts(state => ({ ...state, [latestReport.id]: value }))}
+                featured
+              />
+            )}
+
+            {archivedReports.length > 0 && (
+              <details className="group rounded-2xl border border-surface-border bg-surface-dim/60 p-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-bold [&::-webkit-details-marker]:hidden">
+                  <span>历史月报</span>
+                  <span className="flex items-center gap-1 text-xs text-ink-muted">
+                    {archivedReports.length} 份
+                    <ChevronDown className="h-4 w-4 transition group-open:rotate-180" />
+                  </span>
+                </summary>
+                <div className="mt-3 space-y-3">
+                  {archivedReports.map(report => (
+                    <ReportPanel
+                      key={report.id}
+                      report={report}
+                      snapshots={snapshots}
+                      hidden={hidden}
+                      sharingCardId={sharingCardId}
+                      generatingBackgroundId={generatingBackgroundId}
+                      cardError={cardError}
+                      backgroundError={backgroundError}
+                      backgroundPrompt={getBackgroundPrompt(report)}
+                      demoMode={demoMode}
+                      onShare={handleShareImageCard}
+                      onGenerateBackground={handleGenerateBackground}
+                      onPromptChange={(value) => setBackgroundPrompts(state => ({ ...state, [report.id]: value }))}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
-          </>
+              </details>
+            )}
+          </div>
         )}
       </Card>
 
@@ -114,86 +194,18 @@ export default function Insights() {
             {categoryRows.map(row => {
               const tone = getCategoryTone(row.category)
               return (
-              <div key={row.category}>
-                <div className="mb-1 flex justify-between text-sm">
-                  <span>{row.label}</span>
-                  <b className={tone.text}>{formatWan(row.amount, hidden)}</b>
-                </div>
-                <div className={`h-2 overflow-hidden rounded-full ${tone.track}`}>
-                  <div className={`h-full rounded-full ${tone.bar}`} style={{ width: hidden ? '24%' : `${Math.max(4, (row.amount / maxCategory) * 100)}%` }} />
-                </div>
-              </div>
-              )
-            })}
-          </div>
-        )}
-      </Card>
-
-      <Card className="p-4">
-        <h2 className="font-bold">AI 月报</h2>
-        {visibleReports.length === 0 ? (
-          <p className="mt-3 text-sm text-ink-muted">在设置里开启自动月报后，月度确认会生成 AI 报告。</p>
-        ) : (
-          <div className="mt-3 space-y-3">
-            {visibleReports.map(report => {
-              const snapshot = findReportSnapshot(report, snapshots)
-              return (
-              <details key={report.id} className="rounded-xl border border-surface-border bg-surface-dim/70 p-3">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-bold [&::-webkit-details-marker]:hidden">
-                  <span>{report.month} · {report.status === 'completed' ? '已完成' : report.status === 'failed' ? '失败' : '生成中'}</span>
-                  <span className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-ink-muted">
-                    {formatDateTimeLabel(report.generatedAt)}
-                  </span>
-                </summary>
-                {report.error ? (
-                  <p className="mt-2 text-sm text-danger">{report.error}</p>
-                ) : (
-                  <div className="mt-3 space-y-3">
-                    <div className="grid grid-cols-3 gap-2">
-                      {REPORT_CARD_TEMPLATES.map(template => (
-                        <button
-                          key={template.id}
-                          type="button"
-                          onClick={() => setSelectedTemplate(template.id)}
-                          className={cn(
-                            'rounded-xl border px-2 py-2 text-left transition',
-                            selectedTemplate === template.id
-                              ? 'border-brand bg-brand-light/70 text-brand-dark shadow-[0_8px_18px_rgba(16,185,129,0.12)]'
-                              : 'border-surface-border bg-white/70 text-ink-muted'
-                          )}
-                        >
-                          <span className="block text-xs font-black">{template.label}</span>
-                          <span className="mt-0.5 block text-[10px] leading-4">{template.description}</span>
-                        </button>
-                      ))}
-                    </div>
-                    {snapshot && (
-                      <ReportImageCard report={report} snapshot={snapshot} hidden={hidden} template={selectedTemplate} />
-                    )}
-                    <div>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={sharingCardId === report.id || !snapshot}
-                        onClick={() => handleShareImageCard(report)}
-                      >
-                        <Share2 className="h-4 w-4" />
-                        {sharingCardId === report.id ? '准备图片...' : '保存并分享图片'}
-                      </Button>
-                      {cardError?.id === report.id && (
-                        <p className="mt-2 text-xs text-danger">{cardError.text}</p>
-                      )}
-                    </div>
-                    {report.sections.map(section => (
-                      <section key={section.title} className="rounded-xl bg-white/80 p-3">
-                        <h3 className="text-sm font-bold">{section.title}</h3>
-                        <FormattedReportText content={section.content} hidden={hidden} />
-                      </section>
-                    ))}
-                    <p className="text-xs text-ink-muted">{report.disclaimer}</p>
+                <div key={row.category}>
+                  <div className="mb-1 flex justify-between gap-3 text-sm">
+                    <span>{row.label}</span>
+                    <b className={tone.text}>{formatWan(row.amount, hidden)}</b>
                   </div>
-                )}
-              </details>
+                  <div className={cn('h-2 overflow-hidden rounded-full', tone.track)}>
+                    <div
+                      className={cn('h-full rounded-full', tone.bar)}
+                      style={{ width: hidden ? '24%' : `${Math.max(4, (row.amount / maxCategory) * 100)}%` }}
+                    />
+                  </div>
+                </div>
               )
             })}
           </div>
@@ -203,12 +215,342 @@ export default function Insights() {
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function TrendCard({ trend, hidden, demoMode }: { trend: TrendPoint[]; hidden: boolean; demoMode: boolean }) {
+  const latest = trend[trend.length - 1]
+  const first = trend[0]
+  const netChange = latest && first ? latest.netWorth - first.netWorth : 0
+
   return (
-    <div className="rounded-lg bg-surface-dim p-3">
-      <p className="text-xs text-ink-muted">{label}</p>
-      <p className="mt-1 font-black">{value}</p>
+    <Card className="p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-bold">资产负债走势</h2>
+          <p className="mt-1 text-xs leading-5 text-ink-muted">
+            记录多个月度快照后，可以更直观看到家庭净资产和负债节奏。
+          </p>
+        </div>
+        {demoMode ? (
+          <span className="shrink-0 rounded-full bg-brand-light px-2.5 py-1 text-[11px] font-bold text-brand-dark">
+            演示
+          </span>
+        ) : trend.length === 1 && (
+          <span className="shrink-0 rounded-full bg-brand-light px-2.5 py-1 text-[11px] font-bold text-brand-dark">
+            1 个月
+          </span>
+        )}
+      </div>
+
+      {hidden ? (
+        <p className="mt-3 rounded-xl bg-surface-dim p-3 text-sm text-ink-muted">隐私模式已隐藏走势图和趋势数值。</p>
+      ) : trend.length === 0 ? (
+        <p className="mt-3 text-sm text-ink-muted">生成月度快照后，这里会显示资产、负债、净资产走势。</p>
+      ) : (
+        <>
+          <div className="mt-4 h-60">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trend} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                <CartesianGrid stroke="#e6ede9" strokeDasharray="3 5" vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  interval={trend.length > 12 ? 2 : 0}
+                  minTickGap={12}
+                  tick={{ fontSize: 11, fill: '#76877e' }}
+                  tickFormatter={formatTrendMonthTick}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: '#76877e' }}
+                  tickFormatter={(value) => String(Math.round(Number(value)))}
+                  tickLine={false}
+                  axisLine={false}
+                  width={48}
+                />
+                <Tooltip
+                  formatter={(value, name) => [formatWan(Number(value), hidden), name]}
+                  contentStyle={{ borderRadius: 14, borderColor: '#dfe8e2', boxShadow: '0 12px 30px rgba(36,53,47,0.10)' }}
+                  labelStyle={{ color: '#24352f', fontWeight: 800 }}
+                />
+                <Line type="monotone" dataKey="totalAssets" name="资产" stroke="#4f9b79" strokeWidth={2.4} dot={trend.length <= 1} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="totalLiabilities" name="负债" stroke="#b65d5d" strokeWidth={2.4} dot={trend.length <= 1} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="netWorth" name="净资产" stroke="#486c9f" strokeWidth={2.8} dot={trend.length <= 1} activeDot={{ r: 5 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+            <TrendMetric label="最新净资产" value={formatWan(latest.netWorth, hidden)} />
+            <TrendMetric label="累计变化" value={formatSignedWan(netChange)} tone={netChange >= 0 ? 'good' : 'risk'} />
+            <TrendMetric label="最新负债率" value={formatPercent(latest.totalAssets > 0 ? latest.totalLiabilities / latest.totalAssets : 0, hidden)} tone="risk" />
+          </div>
+        </>
+      )}
+    </Card>
+  )
+}
+
+function TrendMetric({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'good' | 'risk' }) {
+  return (
+    <div className="rounded-2xl bg-surface-dim px-3 py-2">
+      <p className="text-[11px] text-ink-muted">{label}</p>
+      <p className={cn('mt-1 truncate text-sm font-black', tone === 'good' && 'text-brand-dark', tone === 'risk' && 'text-danger')}>
+        {value}
+      </p>
     </div>
+  )
+}
+
+function ReportPanel({
+  report,
+  snapshots,
+  hidden,
+  sharingCardId,
+  generatingBackgroundId,
+  cardError,
+  backgroundError,
+  backgroundPrompt,
+  demoMode,
+  onShare,
+  onGenerateBackground,
+  onPromptChange,
+  featured = false
+}: {
+  report: AiReport
+  snapshots: MonthlySnapshot[]
+  hidden: boolean
+  sharingCardId: string | null
+  generatingBackgroundId: string | null
+  cardError: { id: string; text: string } | null
+  backgroundError: { id: string; text: string } | null
+  backgroundPrompt: string
+  demoMode: boolean
+  onShare: (report: AiReport) => void
+  onGenerateBackground: (report: AiReport) => void
+  onPromptChange: (value: string) => void
+  featured?: boolean
+}) {
+  const snapshot = findReportSnapshot(report, snapshots)
+
+  if (!featured) {
+    return (
+      <details className="group rounded-2xl border border-surface-border bg-white/70 p-3">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-bold [&::-webkit-details-marker]:hidden">
+          <ReportHeader report={report} />
+          <ChevronDown className="h-4 w-4 shrink-0 text-ink-muted transition group-open:rotate-180" />
+        </summary>
+        <ReportPanelBody
+          report={report}
+          snapshot={snapshot}
+          hidden={hidden}
+          sharingCardId={sharingCardId}
+          generatingBackgroundId={generatingBackgroundId}
+          cardError={cardError}
+          backgroundError={backgroundError}
+          backgroundPrompt={backgroundPrompt}
+          demoMode={demoMode}
+          onShare={onShare}
+          onGenerateBackground={onGenerateBackground}
+          onPromptChange={onPromptChange}
+        />
+      </details>
+    )
+  }
+
+  return (
+    <section className="rounded-[20px] border border-surface-border bg-surface-dim/70 p-3">
+      <ReportHeader report={report} featured />
+      <ReportPanelBody
+        report={report}
+        snapshot={snapshot}
+        hidden={hidden}
+        sharingCardId={sharingCardId}
+        generatingBackgroundId={generatingBackgroundId}
+        cardError={cardError}
+        backgroundError={backgroundError}
+        backgroundPrompt={backgroundPrompt}
+        demoMode={demoMode}
+        onShare={onShare}
+        onGenerateBackground={onGenerateBackground}
+        onPromptChange={onPromptChange}
+      />
+    </section>
+  )
+}
+
+function ReportHeader({ report, featured = false }: { report: AiReport; featured?: boolean }) {
+  return (
+    <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className={cn('truncate font-bold', featured ? 'text-base' : 'text-sm')}>
+          {report.month} · {report.status === 'completed' ? '已完成' : report.status === 'failed' ? '失败' : '生成中'}
+        </p>
+        <p className="mt-0.5 text-xs text-ink-muted">生成于 {formatDateTimeLabel(report.generatedAt)}</p>
+      </div>
+      {featured && (
+        <span className="shrink-0 rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-bold text-brand-dark">
+          最新
+        </span>
+      )}
+    </div>
+  )
+}
+
+function ReportPanelBody({
+  report,
+  snapshot,
+  hidden,
+  sharingCardId,
+  generatingBackgroundId,
+  cardError,
+  backgroundError,
+  backgroundPrompt,
+  demoMode,
+  onShare,
+  onGenerateBackground,
+  onPromptChange
+}: {
+  report: AiReport
+  snapshot?: MonthlySnapshot
+  hidden: boolean
+  sharingCardId: string | null
+  generatingBackgroundId: string | null
+  cardError: { id: string; text: string } | null
+  backgroundError: { id: string; text: string } | null
+  backgroundPrompt: string
+  demoMode: boolean
+  onShare: (report: AiReport) => void
+  onGenerateBackground: (report: AiReport) => void
+  onPromptChange: (value: string) => void
+}) {
+  if (report.error) {
+    return <p className="mt-3 text-sm text-danger">{report.error}</p>
+  }
+
+  return (
+    <div className="mt-3 space-y-3">
+      {snapshot && (
+        <ReportImageCard report={report} snapshot={snapshot} hidden={hidden} />
+      )}
+      <details className="group rounded-2xl border border-surface-border bg-white/70 p-3" open={!report.imageCard}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-bold [&::-webkit-details-marker]:hidden">
+          <span>背景提示词</span>
+          <span className="flex items-center gap-1 text-xs text-ink-muted">
+            可修改
+            <ChevronDown className="h-4 w-4 transition group-open:rotate-180" />
+          </span>
+        </summary>
+        <textarea
+          className="mt-3 min-h-32 w-full resize-y rounded-2xl border border-surface-border bg-white/80 p-3 text-xs leading-5 text-ink outline-none transition focus:border-brand"
+          value={backgroundPrompt}
+          onChange={event => onPromptChange(event.target.value)}
+        />
+        <p className="mt-2 text-xs leading-5 text-ink-muted">
+          建议保留“无文字、留出可读区域、低对比纹理”等限制，只微调大理石、淡彩、纸张颗粒这些风格词。
+        </p>
+      </details>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={generatingBackgroundId === report.id || !snapshot || demoMode}
+          onClick={() => onGenerateBackground(report)}
+        >
+          {generatingBackgroundId === report.id ? '生成背景中...' : report.imageCard ? '替换背景' : '生成质感背景'}
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={sharingCardId === report.id || !snapshot}
+          onClick={() => onShare(report)}
+        >
+          <Share2 className="h-4 w-4" />
+          {sharingCardId === report.id ? '准备图片...' : '保存并分享图片'}
+        </Button>
+      </div>
+      <div>
+        {backgroundError?.id === report.id && (
+          <p className="text-xs text-danger">{backgroundError.text}</p>
+        )}
+        {cardError?.id === report.id && (
+          <p className="mt-2 text-xs text-danger">{cardError.text}</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ReportImageCard({ report, snapshot, hidden }: { report: AiReport; snapshot: MonthlySnapshot; hidden: boolean }) {
+  const content = getReportCardContent(report, hidden)
+  const theme = getReportCardPreviewTheme(getReportSeed(report, snapshot))
+  const background = report.imageCard?.backgroundDataUrl
+    ? `linear-gradient(135deg, rgba(255,255,255,0.62), rgba(255,255,255,0.38) 50%, rgba(255,255,255,0.68)), url(${report.imageCard.backgroundDataUrl}) center / cover`
+    : theme.background
+
+  return (
+    <div
+      className="relative aspect-[2/3] overflow-hidden rounded-[22px] border border-white/70 shadow-[0_18px_36px_rgba(36,53,47,0.12)]"
+      style={{ background, color: theme.ink, fontFamily: theme.fontFamily }}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0)_35%,rgba(15,23,42,0.08)_100%)]" />
+      <div className="relative flex h-full flex-col p-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black" style={{ color: theme.accent }}>家庭月报</p>
+            <h3 className="mt-0.5 text-xl font-black tracking-normal">{report.month}</h3>
+          </div>
+          <span className="rounded-full px-2.5 py-1 text-[10px] font-bold" style={{ backgroundColor: theme.surfaceTint, color: theme.muted }}>
+            {report.imageCard ? 'MiniMax 背景' : '待生成背景'}
+          </span>
+        </div>
+
+        <div className="mt-4">
+          <p className="text-xs font-bold" style={{ color: theme.muted }}>家庭净资产</p>
+          <p className="mt-0.5 text-2xl font-black">{formatWan(snapshot.totals.netWorth, hidden)}</p>
+          <div className="mt-2 grid grid-cols-3 gap-1.5 text-[9px]">
+            <PreviewMetric label="资产" value={formatWan(snapshot.totals.totalAssets, hidden)} color={theme.accent} background={theme.metricTint} />
+            <PreviewMetric label="负债" value={formatWan(snapshot.totals.totalLiabilities, hidden)} color={theme.debt} background={theme.metricTint} />
+            <PreviewMetric label="负债率" value={formatPercent(snapshot.totals.debtRatio, hidden)} color={theme.debt} background={theme.metricTint} />
+          </div>
+        </div>
+
+        <div className="mt-3 border-t pt-3" style={{ borderColor: theme.divider }}>
+          <p className="text-xs font-black" style={{ color: theme.accent }}>本月一句话</p>
+          <p className="mt-1 line-clamp-2 text-sm font-black leading-5">{content.headline}</p>
+        </div>
+
+        <div className="mt-3 space-y-2 text-[10px] leading-4">
+          <PreviewSection title="主要变化" items={content.changes.slice(0, 2)} color={theme.accent} />
+          <PreviewSection title="风险提醒" items={content.risks.slice(0, 1)} color={theme.debt} />
+          <PreviewSection title="下月建议" items={content.nextSteps.slice(0, 2)} color={theme.accent} />
+        </div>
+
+        <p className="mt-auto text-[9px] font-semibold leading-4" style={{ color: theme.muted }}>
+          AI 内容仅用于家庭复盘参考，不构成投资、法律或税务建议。
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function PreviewMetric({ label, value, color, background }: { label: string; value: string; color: string; background: string }) {
+  return (
+    <div className="min-w-0 rounded-xl px-2 py-1.5" style={{ backgroundColor: background }}>
+      <p className="truncate font-bold opacity-70">{label}</p>
+      <p className="mt-0.5 truncate font-black" style={{ color }}>{value}</p>
+    </div>
+  )
+}
+
+function PreviewSection({ title, items, color }: { title: string; items: string[]; color: string }) {
+  return (
+    <section className="border-l-2 pl-2" style={{ borderColor: color }}>
+      <h4 className="font-black" style={{ color }}>{title}</h4>
+      <ul className="mt-0.5 space-y-0.5 text-ink/80">
+        {items.map((item, index) => (
+          <li key={index} className="line-clamp-1">· {item}</li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -217,7 +559,7 @@ function findReportSnapshot(report: AiReport, snapshots: MonthlySnapshot[]) {
     || snapshots.find(snapshot => snapshot.month === report.month)
 }
 
-function getCategoryTone(category: string) {
+function getCategoryTone(category: LedgerCategory) {
   const isLiability = category === 'liabilities_loans'
   return {
     bar: isLiability ? 'bg-danger' : 'bg-brand',
@@ -226,146 +568,13 @@ function getCategoryTone(category: string) {
   }
 }
 
-function ReportImageCard({
-  report,
-  snapshot,
-  hidden,
-  template
-}: {
-  report: AiReport
-  snapshot: MonthlySnapshot
-  hidden: boolean
-  template: ReportCardTemplateId
-}) {
-  const headline = getReportSectionLine(report, '一句话') || getReportSectionLine(report)
-  const suggestion = getReportSectionLine(report, '建议') || getReportSectionLine(report, '提醒') || '继续保持月度确认，把现金、负债和长期目标放在一起看。'
-  const style = getPreviewTemplateStyle(template)
-
-  return (
-    <div
-      className="relative aspect-[3/4] overflow-hidden rounded-[20px] border border-white/80 bg-surface-dim shadow-[0_16px_34px_rgba(36,53,47,0.10)]"
-      style={{ background: style.background }}
-    >
-      <div className="absolute inset-3 rounded-[18px] shadow-[0_14px_32px_rgba(15,23,42,0.08)]" style={{ backgroundColor: style.shell }} />
-      <div className="relative flex h-full flex-col p-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs font-semibold" style={{ color: style.muted }}>{style.kicker}</p>
-            <h3 className="mt-1 text-2xl font-black tracking-normal" style={{ color: style.net }}>{report.month}</h3>
-          </div>
-          <span className="rounded-full px-2.5 py-1 text-[10px] font-bold" style={{ backgroundColor: style.badgeFill, color: style.accent }}>本地生成</span>
-        </div>
-
-        <div className="mt-4 rounded-2xl p-3 shadow-[0_8px_18px_rgba(36,53,47,0.06)]" style={{ backgroundColor: style.panel }}>
-          <p className="text-xs" style={{ color: style.muted }}>家庭净资产</p>
-          <p className="mt-1 text-3xl font-black" style={{ color: style.net }}>{formatWan(snapshot.totals.netWorth, hidden)}</p>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-xl p-2" style={{ backgroundColor: style.assetFill }}>
-              <p style={{ color: style.muted }}>资产</p>
-              <b style={{ color: style.accent }}>{formatWan(snapshot.totals.totalAssets, hidden)}</b>
-            </div>
-            <div className="rounded-xl p-2" style={{ backgroundColor: style.debtFill }}>
-              <p style={{ color: style.debt }}>负债</p>
-              <b style={{ color: style.debt }}>{formatWan(snapshot.totals.totalLiabilities, hidden)}</b>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 rounded-2xl p-3" style={{ backgroundColor: style.softPanel }}>
-          <div className="flex items-center justify-between text-xs">
-            <span style={{ color: style.muted }}>负债率</span>
-            <b style={{ color: style.debt }}>{formatPercent(snapshot.totals.debtRatio, hidden)}</b>
-          </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full" style={{ backgroundColor: style.debtFill }}>
-            <div
-              className="h-full rounded-full"
-              style={{
-                backgroundColor: style.debt,
-                width: hidden ? '0%' : `${Math.min(100, Math.max(4, snapshot.totals.debtRatio * 100))}%`
-              }}
-            />
-          </div>
-        </div>
-
-        <div className="mt-auto space-y-2 rounded-2xl p-3" style={{ backgroundColor: style.panel }}>
-          <p className="text-xs font-bold" style={{ color: style.net }}>本月一句话</p>
-          <p className="line-clamp-2 text-sm leading-5" style={{ color: style.muted }}>{maskSensitiveNumbers(headline, hidden)}</p>
-          <p className="border-t pt-2 text-xs leading-5" style={{ borderColor: style.divider, color: style.muted }}>{maskSensitiveNumbers(suggestion, hidden)}</p>
-        </div>
-      </div>
-    </div>
-  )
+function formatTrendMonthTick(month: string) {
+  return month.slice(2)
 }
 
-function getPreviewTemplateStyle(template: ReportCardTemplateId) {
-  if (template === 'statement') {
-    return {
-      kicker: '月度资产单',
-      background: 'radial-gradient(circle at 14% 16%, rgba(47,110,85,0.18), transparent 36%), radial-gradient(circle at 82% 86%, rgba(210,168,58,0.18), transparent 40%), #f6f8f6',
-      shell: 'rgba(255,255,255,0.82)',
-      panel: 'rgba(255,255,255,0.86)',
-      softPanel: 'rgba(246,248,246,0.84)',
-      assetFill: '#e2f1e7',
-      debtFill: '#f7e7e5',
-      accent: '#2f6e55',
-      debt: '#b65d5d',
-      net: '#20342f',
-      muted: '#6b7b72',
-      divider: '#d9e3dd',
-      badgeFill: '#e2f1e7'
-    }
-  }
-
-  if (template === 'focus') {
-    return {
-      kicker: '本月重点',
-      background: 'radial-gradient(circle at 18% 12%, rgba(72,108,159,0.22), transparent 38%), radial-gradient(circle at 84% 30%, rgba(16,185,129,0.14), transparent 36%), radial-gradient(circle at 78% 88%, rgba(194,91,102,0.16), transparent 38%), #f7fbff',
-      shell: 'rgba(255,255,255,0.78)',
-      panel: 'rgba(255,255,255,0.84)',
-      softPanel: 'rgba(244,248,252,0.82)',
-      assetFill: '#e2f1e7',
-      debtFill: '#f8e6e8',
-      accent: '#486c9f',
-      debt: '#c25b66',
-      net: '#1f2f46',
-      muted: '#66758b',
-      divider: '#dce6ef',
-      badgeFill: '#e5edf7'
-    }
-  }
-
-  return {
-    kicker: '家庭月报卡片',
-    background: 'radial-gradient(circle at 16% 12%, rgba(16,185,129,0.26), transparent 34%), radial-gradient(circle at 88% 34%, rgba(225,29,72,0.15), transparent 38%), radial-gradient(circle at 78% 92%, rgba(59,130,246,0.14), transparent 36%), #f8fafc',
-    shell: 'rgba(255,255,255,0.70)',
-    panel: 'rgba(255,255,255,0.80)',
-    softPanel: 'rgba(255,255,255,0.72)',
-    assetFill: 'rgba(209,250,229,0.70)',
-    debtFill: 'rgba(255,228,230,0.80)',
-    accent: '#047857',
-    debt: '#e11d48',
-    net: '#0f172a',
-    muted: '#64748b',
-    divider: '#e2e8f0',
-    badgeFill: 'rgba(209,250,229,0.80)'
-  }
-}
-
-function getReportSectionLine(report: AiReport, titleIncludes?: string) {
-  const section = titleIncludes
-    ? report.sections.find(item => item.title.includes(titleIncludes))
-    : report.sections[0]
-  return cleanReportText(section?.content || '').slice(0, 64)
-}
-
-function cleanReportText(text: string) {
-  return text
-    .replace(/\*\*/g, '')
-    .replace(/^(?:[-*]|\d+\.)\s+/gm, '')
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/^---+$/gm, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+function formatSignedWan(amount: number) {
+  const prefix = amount > 0 ? '+' : ''
+  return `${prefix}${formatWan(amount)}`
 }
 
 function FormattedReportText({ content, hidden }: { content: string; hidden: boolean }) {

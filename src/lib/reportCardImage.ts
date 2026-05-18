@@ -5,27 +5,90 @@ import type { AiReport, MonthlySnapshot } from '@/types/ledger'
 import { formatDateTimeLabel, formatPercent, formatWan, maskSensitiveNumbers } from '@/lib/utils'
 
 const CARD_WIDTH = 1080
-const CARD_HEIGHT = 1440
-const FONT_FAMILY = '"SF Pro Display", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif'
-
-export type ReportCardTemplateId = 'family' | 'statement' | 'focus'
-
-export const REPORT_CARD_TEMPLATES = [
-  { id: 'family', label: '温和家庭', description: '柔和、适合发给家人看' },
-  { id: 'statement', label: '清爽账单', description: '更像一张月度资产单' },
-  { id: 'focus', label: '重点卡片', description: '突出结论和行动提醒' }
-] as const satisfies ReadonlyArray<{ id: ReportCardTemplateId; label: string; description: string }>
+const CARD_HEIGHT = 1620
+const FONT_FAMILY = '"HarmonyOS Sans SC", "MiSans", "OPPO Sans", "PingFang SC", "Microsoft YaHei", sans-serif'
 
 interface ReportCardImageOptions {
   report: AiReport
   snapshot: MonthlySnapshot
   hidden: boolean
-  template?: ReportCardTemplateId
 }
 
+export interface ReportCardContent {
+  headline: string
+  changes: string[]
+  risks: string[]
+  nextSteps: string[]
+}
+
+export interface ReportCardPreviewTheme {
+  background: string
+  ink: string
+  muted: string
+  accent: string
+  debt: string
+  surfaceTint: string
+  metricTint: string
+  divider: string
+  fontFamily: string
+}
+
+interface ReportCardTheme extends ReportCardPreviewTheme {
+  base: string
+  wash: string
+  baseAlt: string
+  glowA: string
+  glowB: string
+  glowC: string
+  assetTint: string
+  debtTint: string
+  accentTint: string
+  badgeTint: string
+  glows: Array<{ x: number; y: number; radius: number; color: string }>
+}
+
+const PALETTES = [
+  {
+    base: '#f7faf4',
+    wash: '#eef8f0',
+    baseAlt: '#fff7ea',
+    ink: '#1d322b',
+    muted: '#5d7067',
+    accent: '#2f7b5d',
+    debt: '#b65d5d',
+    glowA: 'rgba(79,155,121,0.30)',
+    glowB: 'rgba(219,166,70,0.22)',
+    glowC: 'rgba(72,108,159,0.16)'
+  },
+  {
+    base: '#f8fafc',
+    wash: '#eef6ff',
+    baseAlt: '#f4f1ea',
+    ink: '#1f2f46',
+    muted: '#657386',
+    accent: '#486c9f',
+    debt: '#c25b66',
+    glowA: 'rgba(72,108,159,0.25)',
+    glowB: 'rgba(79,155,121,0.18)',
+    glowC: 'rgba(194,91,102,0.18)'
+  },
+  {
+    base: '#fbf8f2',
+    wash: '#f0f7f3',
+    baseAlt: '#f6fbff',
+    ink: '#25342f',
+    muted: '#66736e',
+    accent: '#3d8167',
+    debt: '#a95f63',
+    glowA: 'rgba(61,129,103,0.26)',
+    glowB: 'rgba(113,141,182,0.18)',
+    glowC: 'rgba(214,173,91,0.20)'
+  }
+] as const
+
 export async function shareMonthlyReportCardImage(options: ReportCardImageOptions): Promise<void> {
-  const dataUrl = createMonthlyReportCardImage(options)
-  const filename = `family-report-${options.report.month}-${options.template ?? 'family'}.png`
+  const dataUrl = await createMonthlyReportCardImage(options)
+  const filename = `home-finance-report-${options.report.month}.png`
 
   if (!Capacitor.isNativePlatform()) {
     downloadDataUrl(filename, dataUrl)
@@ -62,245 +125,318 @@ async function writeReportImageFile(filename: string, base64: string) {
   }
 }
 
-export function createMonthlyReportCardImage({ report, snapshot, hidden, template = 'family' }: ReportCardImageOptions): string {
+export async function createMonthlyReportCardImage({ report, snapshot, hidden }: ReportCardImageOptions): Promise<string> {
   const canvas = document.createElement('canvas')
   canvas.width = CARD_WIDTH
   canvas.height = CARD_HEIGHT
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('当前设备暂时不能生成图片。')
 
-  const style = getTemplateStyle(template)
-  const copy = getReportCardCopy(report, hidden)
-  drawBackground(ctx, style)
-  drawHeader(ctx, report, style)
-  drawNetWorthPanel(ctx, snapshot, hidden, style)
-  drawDebtPanel(ctx, snapshot, hidden, style)
-  drawCopyPanel(ctx, copy, style)
-  drawFooter(ctx, report, style)
+  const theme = createReportCardTheme(getReportSeed(report, snapshot))
+  const content = getReportCardContent(report, hidden)
+
+  await drawReportBackground(ctx, report, theme)
+  drawPosterHeader(ctx, report, theme)
+  drawSnapshotSummary(ctx, snapshot, hidden, theme)
+  drawHeadline(ctx, content.headline, theme)
+  drawContentSections(ctx, content, theme)
+  drawFooter(ctx, report, theme)
 
   return canvas.toDataURL('image/png')
 }
 
-interface ReportCardTemplateStyle {
-  kicker: string
-  subtitle: string
-  footer: string
-  background: string
-  shellFill: string
-  panelFill: string
-  secondaryPanelFill: string
-  accent: string
-  accentDark: string
-  debt: string
-  debtFill: string
-  assetFill: string
-  net: string
-  muted: string
-  divider: string
-  badgeFill: string
-  badgeText: string
-  dateBadgeFill: string
-  dateBadgeText: string
-  glows: Array<{ x: number; y: number; radius: number; color: string }>
-}
+export function getReportCardContent(report: AiReport, hidden: boolean): ReportCardContent {
+  const headline =
+    getSectionItems(report, ['一句话'], 1)[0]
+    || getSectionItems(report, ['月度报告'], 1)[0]
+    || '这个月的家庭资产已经整理好，可以一起看看结构和节奏。'
 
-const TEMPLATE_STYLES: Record<ReportCardTemplateId, ReportCardTemplateStyle> = {
-  family: {
-    kicker: '家庭月报',
-    subtitle: '一张适合保存和分享的家庭资产小结',
-    footer: '家庭资产月报 · 本地生成图片',
-    background: '#f8fafc',
-    shellFill: 'rgba(255,255,255,0.86)',
-    panelFill: 'rgba(255,255,255,0.84)',
-    secondaryPanelFill: 'rgba(255,255,255,0.76)',
-    accent: '#059669',
-    accentDark: '#047857',
-    debt: '#e11d48',
-    debtFill: '#ffe4e6',
-    assetFill: '#d1fae5',
-    net: '#0f172a',
-    muted: '#64748b',
-    divider: '#e2e8f0',
-    badgeFill: '#d1fae5',
-    badgeText: '#059669',
-    dateBadgeFill: '#f1f5f9',
-    dateBadgeText: '#64748b',
-    glows: [
-      { x: 180, y: 160, radius: 520, color: 'rgba(16,185,129,0.28)' },
-      { x: 900, y: 460, radius: 560, color: 'rgba(225,29,72,0.18)' },
-      { x: 820, y: 1260, radius: 520, color: 'rgba(59,130,246,0.16)' }
-    ]
-  },
-  statement: {
-    kicker: '月度资产单',
-    subtitle: '更克制的账单式结构，适合归档留存',
-    footer: '家财簿 · 月度资产单',
-    background: '#f6f8f6',
-    shellFill: 'rgba(255,255,255,0.92)',
-    panelFill: 'rgba(255,255,255,0.90)',
-    secondaryPanelFill: 'rgba(246,248,246,0.92)',
-    accent: '#2f6e55',
-    accentDark: '#244f40',
-    debt: '#b65d5d',
-    debtFill: '#f7e7e5',
-    assetFill: '#e2f1e7',
-    net: '#20342f',
-    muted: '#6b7b72',
-    divider: '#d9e3dd',
-    badgeFill: '#e2f1e7',
-    badgeText: '#2f6e55',
-    dateBadgeFill: '#edf2ef',
-    dateBadgeText: '#6b7b72',
-    glows: [
-      { x: 140, y: 220, radius: 440, color: 'rgba(47,110,85,0.18)' },
-      { x: 920, y: 1120, radius: 520, color: 'rgba(210,168,58,0.18)' }
-    ]
-  },
-  focus: {
-    kicker: '本月重点',
-    subtitle: '把结论、比例和下一步放在同一张卡里',
-    footer: '家庭资产月报 · 重点摘要',
-    background: '#f7fbff',
-    shellFill: 'rgba(255,255,255,0.88)',
-    panelFill: 'rgba(255,255,255,0.86)',
-    secondaryPanelFill: 'rgba(244,248,252,0.86)',
-    accent: '#486c9f',
-    accentDark: '#31527f',
-    debt: '#c25b66',
-    debtFill: '#f8e6e8',
-    assetFill: '#e2f1e7',
-    net: '#1f2f46',
-    muted: '#66758b',
-    divider: '#dce6ef',
-    badgeFill: '#e5edf7',
-    badgeText: '#486c9f',
-    dateBadgeFill: '#eef4fa',
-    dateBadgeText: '#66758b',
-    glows: [
-      { x: 190, y: 180, radius: 480, color: 'rgba(72,108,159,0.22)' },
-      { x: 850, y: 380, radius: 500, color: 'rgba(16,185,129,0.14)' },
-      { x: 820, y: 1220, radius: 500, color: 'rgba(194,91,102,0.16)' }
-    ]
+  const changes = getSectionItems(report, ['主要变化', '变化'], 3)
+  const risks = getSectionItems(report, ['风险提醒', '风险', '提醒'], 2)
+  const nextSteps = getSectionItems(report, ['下月建议', '建议'], 3)
+
+  return {
+    headline: maskSensitiveNumbers(headline, hidden),
+    changes: withFallback(changes, ['本月资产和负债已经完成一次集中复盘。'], hidden),
+    risks: withFallback(risks, ['继续关注负债比例、现金缓冲和到期事项。'], hidden),
+    nextSteps: withFallback(nextSteps, ['下月继续做一次月度确认，把变化及时记下来。'], hidden)
   }
 }
 
-function getTemplateStyle(template: ReportCardTemplateId): ReportCardTemplateStyle {
-  return TEMPLATE_STYLES[template] ?? TEMPLATE_STYLES.family
+export function getReportCardPreviewTheme(seed: string): ReportCardPreviewTheme {
+  const theme = createReportCardTheme(seed)
+  return {
+    background: theme.background,
+    ink: theme.ink,
+    muted: theme.muted,
+    accent: theme.accent,
+    debt: theme.debt,
+    surfaceTint: theme.surfaceTint,
+    metricTint: theme.metricTint,
+    divider: theme.divider,
+    fontFamily: theme.fontFamily
+  }
 }
 
-function drawBackground(ctx: CanvasRenderingContext2D, style: ReportCardTemplateStyle) {
-  ctx.fillStyle = style.background
+export function getReportSeed(report: AiReport, snapshot: MonthlySnapshot): string {
+  return `${report.month}-${report.generatedAt}-${snapshot.id}`
+}
+
+function createReportCardTheme(seed: string): ReportCardTheme {
+  const rng = mulberry32(hashString(seed))
+  const palette = PALETTES[Math.floor(rng() * PALETTES.length)] || PALETTES[0]
+  const glows = [
+    {
+      x: 160 + rng() * 180,
+      y: 130 + rng() * 180,
+      radius: 480 + rng() * 160,
+      color: palette.glowA
+    },
+    {
+      x: 760 + rng() * 180,
+      y: 280 + rng() * 260,
+      radius: 520 + rng() * 160,
+      color: palette.glowB
+    },
+    {
+      x: 600 + rng() * 300,
+      y: 1080 + rng() * 230,
+      radius: 500 + rng() * 190,
+      color: palette.glowC
+    }
+  ]
+  const background = [
+    `radial-gradient(circle at ${Math.round(glows[0].x / CARD_WIDTH * 100)}% ${Math.round(glows[0].y / CARD_HEIGHT * 100)}%, ${palette.glowA}, transparent 36%)`,
+    `radial-gradient(circle at ${Math.round(glows[1].x / CARD_WIDTH * 100)}% ${Math.round(glows[1].y / CARD_HEIGHT * 100)}%, ${palette.glowB}, transparent 40%)`,
+    `radial-gradient(circle at ${Math.round(glows[2].x / CARD_WIDTH * 100)}% ${Math.round(glows[2].y / CARD_HEIGHT * 100)}%, ${palette.glowC}, transparent 42%)`,
+    `linear-gradient(135deg, ${palette.base} 0%, ${palette.wash} 48%, ${palette.baseAlt} 100%)`
+  ].join(', ')
+
+  return {
+    ...palette,
+    background,
+    glows,
+    assetTint: hexToRgba(palette.accent, 0.13),
+    debtTint: hexToRgba(palette.debt, 0.13),
+    accentTint: hexToRgba(palette.accent, 0.18),
+    badgeTint: hexToRgba(palette.ink, 0.07),
+    surfaceTint: hexToRgba(palette.ink, 0.055),
+    metricTint: hexToRgba(palette.ink, 0.075),
+    divider: hexToRgba(palette.ink, 0.16),
+    fontFamily: FONT_FAMILY
+  }
+}
+
+async function drawReportBackground(ctx: CanvasRenderingContext2D, report: AiReport, theme: ReportCardTheme) {
+  if (report.imageCard?.backgroundDataUrl) {
+    try {
+      const image = await loadImage(report.imageCard.backgroundDataUrl)
+      drawCoverImage(ctx, image, CARD_WIDTH, CARD_HEIGHT)
+      drawImageReadabilityLayer(ctx, theme)
+      return
+    } catch {
+      drawGeneratedBackground(ctx, theme)
+      return
+    }
+  }
+
+  drawGeneratedBackground(ctx, theme)
+}
+
+function drawGeneratedBackground(ctx: CanvasRenderingContext2D, theme: ReportCardTheme) {
+  const gradient = ctx.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT)
+  gradient.addColorStop(0, theme.base)
+  gradient.addColorStop(0.48, theme.wash)
+  gradient.addColorStop(1, theme.baseAlt)
+  ctx.fillStyle = gradient
   ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT)
 
-  style.glows.forEach(glow => {
-    const gradient = ctx.createRadialGradient(glow.x, glow.y, 40, glow.x, glow.y, glow.radius)
-    gradient.addColorStop(0, glow.color)
-    gradient.addColorStop(1, glow.color.replace(/[\d.]+\)$/, '0)'))
-    ctx.fillStyle = gradient
+  theme.glows.forEach(glow => {
+    const blob = ctx.createRadialGradient(glow.x, glow.y, 30, glow.x, glow.y, glow.radius)
+    blob.addColorStop(0, glow.color)
+    blob.addColorStop(1, glow.color.replace(/[\d.]+\)$/, '0)'))
+    ctx.fillStyle = blob
     ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT)
   })
 
   ctx.save()
-  ctx.shadowColor = 'rgba(15,23,42,0.08)'
-  ctx.shadowBlur = 42
-  ctx.shadowOffsetY = 18
-  roundedRect(ctx, 64, 64, 952, 1312, 46)
-  ctx.fillStyle = style.shellFill
-  ctx.fill()
+  ctx.globalAlpha = 0.22
+  ctx.strokeStyle = theme.divider
+  ctx.lineWidth = 1.4
+  for (let y = 180; y < CARD_HEIGHT; y += 92) {
+    ctx.beginPath()
+    ctx.moveTo(70, y)
+    ctx.bezierCurveTo(300, y - 38, 520, y + 44, 1010, y - 8)
+    ctx.stroke()
+  }
+  ctx.restore()
+
+  const vignette = ctx.createRadialGradient(CARD_WIDTH / 2, CARD_HEIGHT / 2, 320, CARD_WIDTH / 2, CARD_HEIGHT / 2, 950)
+  vignette.addColorStop(0, 'rgba(255,255,255,0)')
+  vignette.addColorStop(1, 'rgba(15,23,42,0.075)')
+  ctx.fillStyle = vignette
+  ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT)
+}
+
+function drawImageReadabilityLayer(ctx: CanvasRenderingContext2D, theme: ReportCardTheme) {
+  const wash = ctx.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT)
+  wash.addColorStop(0, 'rgba(255,255,255,0.60)')
+  wash.addColorStop(0.42, 'rgba(255,255,255,0.42)')
+  wash.addColorStop(0.72, 'rgba(255,255,255,0.50)')
+  wash.addColorStop(1, 'rgba(255,255,255,0.68)')
+  ctx.fillStyle = wash
+  ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT)
+
+  const side = ctx.createLinearGradient(0, 0, CARD_WIDTH, 0)
+  side.addColorStop(0, 'rgba(255,255,255,0.44)')
+  side.addColorStop(0.5, 'rgba(255,255,255,0.06)')
+  side.addColorStop(1, 'rgba(255,255,255,0.28)')
+  ctx.fillStyle = side
+  ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT)
+
+  ctx.save()
+  ctx.globalAlpha = 0.16
+  ctx.fillStyle = theme.base
+  for (let y = 0; y < CARD_HEIGHT; y += 6) {
+    ctx.fillRect(0, y, CARD_WIDTH, 1)
+  }
   ctx.restore()
 }
 
-function drawHeader(ctx: CanvasRenderingContext2D, report: AiReport, style: ReportCardTemplateStyle) {
-  drawBadge(ctx, 116, 116, style.kicker, style.badgeFill, style.badgeText)
-  drawBadge(ctx, 790, 116, formatDateTimeLabel(report.generatedAt).slice(0, 10), style.dateBadgeFill, style.dateBadgeText)
+function drawPosterHeader(ctx: CanvasRenderingContext2D, report: AiReport, theme: ReportCardTheme) {
+  drawBadge(ctx, 96, 82, '家庭月报', theme.badgeTint, theme.accent)
+  drawBadge(ctx, 768, 82, formatDateTimeLabel(report.generatedAt).slice(0, 10), theme.badgeTint, theme.muted)
 
-  ctx.fillStyle = style.net
+  ctx.fillStyle = theme.ink
+  ctx.font = `900 72px ${FONT_FAMILY}`
+  ctx.fillText(report.month, 96, 206)
+
+  ctx.fillStyle = theme.muted
+  ctx.font = `700 26px ${FONT_FAMILY}`
+  ctx.fillText(report.imageCard ? 'MiniMax 背景 · 本地安全排版' : '本地背景 · 可生成 MiniMax 质感背景', 100, 256)
+}
+
+function drawSnapshotSummary(ctx: CanvasRenderingContext2D, snapshot: MonthlySnapshot, hidden: boolean, theme: ReportCardTheme) {
+  ctx.fillStyle = theme.muted
+  ctx.font = `800 26px ${FONT_FAMILY}`
+  ctx.fillText('家庭净资产', 96, 336)
+
+  ctx.fillStyle = theme.ink
   ctx.font = `900 76px ${FONT_FAMILY}`
-  ctx.fillText(report.month, 116, 236)
+  fitText(ctx, formatWan(snapshot.totals.netWorth, hidden), 96, 424, 880)
 
-  ctx.fillStyle = style.muted
-  ctx.font = `600 28px ${FONT_FAMILY}`
-  ctx.fillText(style.subtitle, 118, 286)
+  drawMetricPill(ctx, 96, 486, 270, 84, '资产', formatWan(snapshot.totals.totalAssets, hidden), theme.assetTint, theme.accent)
+  drawMetricPill(ctx, 390, 486, 270, 84, '负债', formatWan(snapshot.totals.totalLiabilities, hidden), theme.debtTint, theme.debt)
+  drawMetricPill(ctx, 684, 486, 300, 84, '负债率', formatPercent(snapshot.totals.debtRatio, hidden), theme.metricTint, theme.debt)
 }
 
-function drawNetWorthPanel(ctx: CanvasRenderingContext2D, snapshot: MonthlySnapshot, hidden: boolean, style: ReportCardTemplateStyle) {
-  drawPanel(ctx, 116, 340, 848, 354, 34, style.panelFill)
+function drawHeadline(ctx: CanvasRenderingContext2D, headline: string, theme: ReportCardTheme) {
+  ctx.fillStyle = theme.accent
+  ctx.font = `900 30px ${FONT_FAMILY}`
+  ctx.fillText('本月一句话', 96, 654)
 
-  ctx.fillStyle = style.muted
-  ctx.font = `700 28px ${FONT_FAMILY}`
-  ctx.fillText('家庭净资产', 156, 404)
-
-  ctx.fillStyle = style.net
-  ctx.font = `900 74px ${FONT_FAMILY}`
-  fitText(ctx, formatWan(snapshot.totals.netWorth, hidden), 156, 496, 760)
-
-  drawMetricBox(ctx, 156, 556, 362, 98, '资产', formatWan(snapshot.totals.totalAssets, hidden), style.assetFill, style.accent)
-  drawMetricBox(ctx, 558, 556, 362, 98, '负债', formatWan(snapshot.totals.totalLiabilities, hidden), style.debtFill, style.debt)
+  ctx.fillStyle = theme.ink
+  ctx.font = `800 38px ${FONT_FAMILY}`
+  wrapText(ctx, headline, 96, 708, 888, 48, 2)
 }
 
-function drawDebtPanel(ctx: CanvasRenderingContext2D, snapshot: MonthlySnapshot, hidden: boolean, style: ReportCardTemplateStyle) {
-  drawPanel(ctx, 116, 730, 848, 168, 30, style.secondaryPanelFill)
-
-  ctx.fillStyle = style.muted
-  ctx.font = `700 28px ${FONT_FAMILY}`
-  ctx.fillText('负债率', 156, 792)
-
-  ctx.fillStyle = style.debt
-  ctx.font = `900 42px ${FONT_FAMILY}`
-  ctx.textAlign = 'right'
-  ctx.fillText(formatPercent(snapshot.totals.debtRatio, hidden), 920, 792)
-  ctx.textAlign = 'left'
-
-  roundedRect(ctx, 156, 836, 764, 22, 11)
-  ctx.fillStyle = style.debtFill
-  ctx.fill()
-  roundedRect(ctx, 156, 836, hidden ? 0 : Math.max(34, Math.min(764, 764 * snapshot.totals.debtRatio)), 22, 11)
-  ctx.fillStyle = style.debt
-  ctx.fill()
+function drawContentSections(ctx: CanvasRenderingContext2D, content: ReportCardContent, theme: ReportCardTheme) {
+  drawReportSection(ctx, {
+    title: '主要变化',
+    items: content.changes,
+    x: 96,
+    y: 806,
+    width: 888,
+    height: 220,
+    accent: theme.accent,
+    theme,
+    maxItems: 3
+  })
+  drawReportSection(ctx, {
+    title: '风险提醒',
+    items: content.risks,
+    x: 96,
+    y: 1062,
+    width: 888,
+    height: 166,
+    accent: theme.debt,
+    theme,
+    maxItems: 2
+  })
+  drawReportSection(ctx, {
+    title: '下月建议',
+    items: content.nextSteps,
+    x: 96,
+    y: 1264,
+    width: 888,
+    height: 210,
+    accent: theme.accent,
+    theme,
+    maxItems: 3
+  })
 }
 
-function drawCopyPanel(ctx: CanvasRenderingContext2D, copy: { headline: string; suggestion: string; bullets: string[] }, style: ReportCardTemplateStyle) {
-  drawPanel(ctx, 116, 934, 848, 296, 34, style.panelFill)
-
-  ctx.fillStyle = style.net
-  ctx.font = `900 34px ${FONT_FAMILY}`
-  ctx.fillText('本月一句话', 156, 1000)
-
-  ctx.fillStyle = style.net
-  ctx.font = `700 31px ${FONT_FAMILY}`
-  wrapText(ctx, copy.headline, 156, 1056, 760, 42, 2)
-
-  ctx.strokeStyle = style.divider
+function drawReportSection(
+  ctx: CanvasRenderingContext2D,
+  options: {
+    title: string
+    items: string[]
+    x: number
+    y: number
+    width: number
+    height: number
+    accent: string
+    theme: ReportCardTheme
+    maxItems: number
+  }
+) {
+  const { title, items, x, y, width, height, accent, theme, maxItems } = options
+  ctx.strokeStyle = theme.divider
   ctx.lineWidth = 2
   ctx.beginPath()
-  ctx.moveTo(156, 1136)
-  ctx.lineTo(920, 1136)
+  ctx.moveTo(x, y)
+  ctx.lineTo(x + width, y)
   ctx.stroke()
 
-  ctx.fillStyle = style.muted
-  ctx.font = `600 26px ${FONT_FAMILY}`
-  wrapText(ctx, copy.suggestion, 156, 1186, 760, 36, 2)
+  ctx.strokeStyle = accent
+  ctx.lineWidth = 6
+  ctx.beginPath()
+  ctx.moveTo(x, y + 22)
+  ctx.lineTo(x, y + height - 8)
+  ctx.stroke()
 
-  if (copy.bullets[0]) {
-    ctx.fillStyle = style.accent
-    ctx.font = `800 24px ${FONT_FAMILY}`
-    ctx.fillText(copy.bullets[0], 156, 1274)
+  ctx.fillStyle = accent
+  ctx.font = `900 27px ${FONT_FAMILY}`
+  ctx.fillText(title, x + 28, y + 44)
+
+  ctx.fillStyle = theme.ink
+  ctx.font = `700 24px ${FONT_FAMILY}`
+  let cursor = y + 86
+  for (const item of items.slice(0, maxItems)) {
+    if (cursor > y + height - 24) break
+    ctx.fillStyle = accent
+    ctx.fillText('•', x + 30, cursor)
+    ctx.fillStyle = theme.ink
+    const lines = wrapText(ctx, item, x + 62, cursor, width - 88, 32, 2)
+    cursor += Math.max(1, lines) * 32 + 9
   }
 }
 
-function drawFooter(ctx: CanvasRenderingContext2D, report: AiReport, style: ReportCardTemplateStyle) {
-  ctx.fillStyle = style.muted
-  ctx.font = `600 24px ${FONT_FAMILY}`
-  ctx.fillText(style.footer, 116, 1318)
+function drawFooter(ctx: CanvasRenderingContext2D, report: AiReport, theme: ReportCardTheme) {
+  ctx.fillStyle = theme.muted
+  ctx.font = `700 23px ${FONT_FAMILY}`
+  ctx.fillText('AI 内容仅用于家庭复盘参考，不构成投资、法律或税务建议。', 96, 1548)
+  ctx.font = `700 21px ${FONT_FAMILY}`
+  ctx.fillText('家庭资产月报 · 本地排版生成', 96, 1588)
 
   if (report.model) {
     ctx.textAlign = 'right'
-    ctx.fillText(report.model, 964, 1318)
+    fitText(ctx, report.model, 984, 1588, 360)
     ctx.textAlign = 'left'
   }
 }
 
-function drawMetricBox(
+function drawMetricPill(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -311,29 +447,23 @@ function drawMetricBox(
   fill: string,
   color: string
 ) {
-  roundedRect(ctx, x, y, width, height, 24)
+  roundedRect(ctx, x, y, width, height, 28)
   ctx.fillStyle = fill
   ctx.fill()
-  ctx.fillStyle = '#64748b'
-  ctx.font = `700 22px ${FONT_FAMILY}`
-  ctx.fillText(label, x + 24, y + 38)
+  ctx.fillStyle = 'rgba(255,255,255,0.26)'
+  ctx.strokeStyle = 'rgba(255,255,255,0.42)'
+  ctx.lineWidth = 1.5
+  ctx.stroke()
+
   ctx.fillStyle = color
-  ctx.font = `900 30px ${FONT_FAMILY}`
-  fitText(ctx, value, x + 24, y + 76, width - 48)
+  ctx.font = `800 22px ${FONT_FAMILY}`
+  ctx.fillText(label, x + 24, y + 34)
+  ctx.fillStyle = color
+  ctx.font = `900 28px ${FONT_FAMILY}`
+  fitText(ctx, value, x + 24, y + 70, width - 48)
 }
 
-function drawPanel(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number, fill: string) {
-  ctx.save()
-  ctx.shadowColor = 'rgba(15,23,42,0.06)'
-  ctx.shadowBlur = 24
-  ctx.shadowOffsetY = 10
-  roundedRect(ctx, x, y, width, height, radius)
-  ctx.fillStyle = fill
-  ctx.fill()
-  ctx.restore()
-}
-
-function drawBadge(ctx: CanvasRenderingContext2D, x: number, y: number, text: string, fill = '#d1fae5', color = '#059669') {
+function drawBadge(ctx: CanvasRenderingContext2D, x: number, y: number, text: string, fill: string, color: string) {
   ctx.font = `800 24px ${FONT_FAMILY}`
   const width = Math.max(136, ctx.measureText(text).width + 46)
   roundedRect(ctx, x, y, width, 46, 23)
@@ -395,29 +525,52 @@ function wrapText(
     const isLast = index === maxLines - 1 && lines.length > maxLines
     fitText(ctx, isLast ? `${item}...` : item, x, y + index * lineHeight, maxWidth)
   })
+
+  return Math.min(lines.length || 1, maxLines)
 }
 
-function getReportCardCopy(report: AiReport, hidden: boolean) {
-  const headline = getReportSectionLine(report, '一句话') || getReportSectionLine(report) || '这个月的家庭资产已经整理好。'
-  const suggestion = getReportSectionLine(report, '建议') || getReportSectionLine(report, '提醒') || '继续保持月度确认，把现金、负债和长期目标放在一起看。'
-  const bullets = report.sections
-    .flatMap(section => section.content.split('\n'))
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error('图片加载失败。'))
+    image.src = src
+  })
+}
+
+function drawCoverImage(ctx: CanvasRenderingContext2D, image: HTMLImageElement, width: number, height: number) {
+  const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight)
+  const sw = width / scale
+  const sh = height / scale
+  const sx = (image.naturalWidth - sw) / 2
+  const sy = (image.naturalHeight - sh) / 2
+  ctx.drawImage(image, sx, sy, sw, sh, 0, 0, width, height)
+}
+
+function getSectionItems(report: AiReport, titleIncludes: string[], maxItems: number) {
+  const section = report.sections.find(item => titleIncludes.some(keyword => item.title.includes(keyword)))
+  return extractReportItems(section?.content || '').slice(0, maxItems)
+}
+
+function withFallback(items: string[], fallback: string[], hidden: boolean) {
+  const source = items.length > 0 ? items : fallback
+  return source.map(item => maskSensitiveNumbers(item, hidden))
+}
+
+function extractReportItems(text: string) {
+  const lineItems = text
+    .split('\n')
     .map(cleanReportText)
     .filter(Boolean)
-    .slice(0, 3)
 
-  return {
-    headline: maskSensitiveNumbers(headline, hidden),
-    suggestion: maskSensitiveNumbers(suggestion, hidden),
-    bullets: bullets.map(item => maskSensitiveNumbers(item, hidden))
-  }
-}
+  if (lineItems.length > 0) return lineItems
 
-function getReportSectionLine(report: AiReport, titleIncludes?: string) {
-  const section = titleIncludes
-    ? report.sections.find(item => item.title.includes(titleIncludes))
-    : report.sections[0]
-  return cleanReportText(section?.content || '').slice(0, 70)
+  const compact = cleanReportText(text)
+  if (!compact) return []
+  return compact
+    .split(/[。！？；;]/)
+    .map(item => cleanReportText(item))
+    .filter(Boolean)
 }
 
 function cleanReportText(text: string) {
@@ -428,6 +581,33 @@ function cleanReportText(text: string) {
     .replace(/^---+$/gm, '')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+function hashString(input: string) {
+  let hash = 2166136261
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
+}
+
+function mulberry32(seed: number) {
+  return function random() {
+    let value = seed += 0x6d2b79f5
+    value = Math.imul(value ^ (value >>> 15), value | 1)
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function hexToRgba(hex: string, alpha: number) {
+  const normalized = hex.replace('#', '')
+  const value = Number.parseInt(normalized, 16)
+  const r = (value >> 16) & 255
+  const g = (value >> 8) & 255
+  const b = value & 255
+  return `rgba(${r},${g},${b},${alpha})`
 }
 
 function downloadDataUrl(filename: string, dataUrl: string) {
