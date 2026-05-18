@@ -222,6 +222,7 @@ function TrendCard({ trend, hidden, demoMode }: { trend: TrendPoint[]; hidden: b
   const latest = trend[trend.length - 1]
   const first = trend[0]
   const netChange = latest && first ? latest.netWorth - first.netWorth : 0
+  const xAxisTicks = getTrendXAxisTicks(trend)
 
   return (
     <Card className="p-4">
@@ -251,16 +252,19 @@ function TrendCard({ trend, hidden, demoMode }: { trend: TrendPoint[]; hidden: b
         <>
           <div className="mt-4 h-60">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trend} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+              <LineChart data={trend} margin={{ top: 8, right: 8, left: -18, bottom: 6 }}>
                 <CartesianGrid stroke="#e6ede9" strokeDasharray="3 5" vertical={false} />
                 <XAxis
                   dataKey="month"
-                  interval={trend.length > 12 ? 2 : 0}
-                  minTickGap={12}
-                  tick={{ fontSize: 11, fill: '#76877e' }}
-                  tickFormatter={formatTrendMonthTick}
+                  ticks={xAxisTicks}
+                  interval={0}
+                  minTickGap={18}
+                  tick={{ fontSize: 10, fill: '#76877e' }}
+                  tickFormatter={(month) => formatTrendMonthTick(String(month), xAxisTicks)}
+                  tickMargin={8}
                   tickLine={false}
                   axisLine={false}
+                  height={32}
                 />
                 <YAxis
                   tick={{ fontSize: 11, fill: '#76877e' }}
@@ -648,8 +652,28 @@ function getCategoryTone(category: LedgerCategory) {
   }
 }
 
-function formatTrendMonthTick(month: string) {
-  return month.slice(2)
+function getTrendXAxisTicks(trend: TrendPoint[]) {
+  if (trend.length <= 6) return trend.map(point => point.month)
+
+  const maxTicks = trend.length <= 12 ? 5 : 6
+  const lastIndex = trend.length - 1
+  const step = lastIndex / (maxTicks - 1)
+  const ticks = Array.from({ length: maxTicks }, (_, index) => trend[Math.round(index * step)]?.month)
+    .filter((month): month is string => Boolean(month))
+
+  return Array.from(new Set(ticks))
+}
+
+function formatTrendMonthTick(month: string, visibleTicks: string[]) {
+  const [year, monthValue] = month.split('-')
+  const monthNumber = Number(monthValue)
+  if (!year || !Number.isFinite(monthNumber)) return month.slice(2)
+
+  const tickIndex = visibleTicks.indexOf(month)
+  const previousYear = tickIndex > 0 ? visibleTicks[tickIndex - 1]?.split('-')[0] : undefined
+  const shouldShowYear = tickIndex <= 0 || previousYear !== year
+
+  return shouldShowYear ? `${year.slice(2)}年${monthNumber}月` : `${monthNumber}月`
 }
 
 function formatSignedWan(amount: number) {
