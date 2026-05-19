@@ -128,7 +128,8 @@ export default function Monthly() {
 
       <Button
         size="lg"
-        className="w-full"
+        variant={hasSnapshotRecords ? 'primary' : 'secondary'}
+        className={hasSnapshotRecords ? 'w-full' : 'w-full border-dashed bg-surface-dim text-ink-muted shadow-none'}
         disabled={saving || !hasSnapshotRecords}
         onClick={async () => {
           if (!hasSnapshotRecords) return
@@ -159,7 +160,7 @@ export default function Monthly() {
           }
         }}
       >
-        {saving ? '生成中，请保持前台...' : hasSnapshotRecords ? '生成本月快照' : '先添加记录再生成快照'}
+        {saving ? '生成中，请保持前台...' : hasSnapshotRecords ? '生成本月快照' : '添加记录后可生成快照'}
       </Button>
 
       {latest && (

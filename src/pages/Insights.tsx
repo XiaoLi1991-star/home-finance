@@ -230,7 +230,7 @@ function TrendCard({ trend, hidden, demoMode }: { trend: TrendPoint[]; hidden: b
         <div>
           <h2 className="font-bold">资产负债走势</h2>
           <p className="mt-1 text-xs leading-5 text-ink-muted">
-            记录多个月度快照后，可以更直观看到家庭净资产和负债节奏。
+            月度快照会沉淀成家庭资产曲线。
           </p>
         </div>
         {demoMode ? (
@@ -247,7 +247,7 @@ function TrendCard({ trend, hidden, demoMode }: { trend: TrendPoint[]; hidden: b
       {hidden ? (
         <p className="mt-3 rounded-xl bg-surface-dim p-3 text-sm text-ink-muted">隐私模式已隐藏走势图和趋势数值。</p>
       ) : trend.length === 0 ? (
-        <p className="mt-3 text-sm text-ink-muted">生成月度快照后，这里会显示资产、负债、净资产走势。</p>
+        <p className="mt-3 text-sm text-ink-muted">生成快照后展示趋势图。</p>
       ) : (
         <>
           <div className="mt-4 h-60">

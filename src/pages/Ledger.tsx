@@ -35,69 +35,69 @@ export default function Ledger() {
       <PageHeader
         title="台账"
         subtitle="资产和负债都在这里"
-        action={
-          <Link to="/ledger/new">
-            <Button size="icon" aria-label="新增记录">
-              <Plus className="h-5 w-5" />
-            </Button>
-          </Link>
-        }
       />
 
-      <Card className="p-3">
-        <details>
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
-            <span className="flex items-center gap-2 font-bold">
-              <Search className="h-4 w-4 text-ink-muted" />
-              筛选与搜索
-            </span>
-            <span className="text-xs text-ink-muted">{getFilterLabel(kind, category, query)}</span>
-          </summary>
-          <div className="mt-3 space-y-3">
-            <label className="flex items-center gap-2 rounded-xl bg-surface-dark px-3 py-2">
-              <Search className="h-4 w-4 text-ink-muted" />
-              <input
-                value={query}
-                onChange={event => setQuery(event.target.value)}
-                className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-light"
-                placeholder="搜索名称、备注、分类"
-              />
-            </label>
-            <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {(['all', 'asset', 'liability'] as const).map(value => (
+      <div className="flex items-start gap-2">
+        <Card className="min-w-0 flex-1 p-3">
+          <details>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+              <span className="flex min-w-0 items-center gap-2 font-bold">
+                <Search className="h-4 w-4 shrink-0 text-ink-muted" />
+                <span className="truncate">筛选与搜索</span>
+              </span>
+              <span className="shrink-0 text-xs text-ink-muted">{getFilterLabel(kind, category, query)}</span>
+            </summary>
+            <div className="mt-3 space-y-3">
+              <label className="flex items-center gap-2 rounded-xl bg-surface-dark px-3 py-2">
+                <Search className="h-4 w-4 text-ink-muted" />
+                <input
+                  value={query}
+                  onChange={event => setQuery(event.target.value)}
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-light"
+                  placeholder="搜索名称、备注、分类"
+                />
+              </label>
+              <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                {(['all', 'asset', 'liability'] as const).map(value => (
+                  <button
+                    key={value}
+                    onClick={() => setKind(value)}
+                    className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
+                      kind === value ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
+                    }`}
+                  >
+                    {value === 'all' ? '全部' : value === 'asset' ? '资产' : '负债'}
+                  </button>
+                ))}
                 <button
-                  key={value}
-                  onClick={() => setKind(value)}
+                  onClick={() => setCategory('all')}
                   className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-                    kind === value ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
+                    category === 'all' ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
                   }`}
                 >
-                  {value === 'all' ? '全部' : value === 'asset' ? '资产' : '负债'}
+                  全分类
                 </button>
-              ))}
-              <button
-                onClick={() => setCategory('all')}
-                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-                  category === 'all' ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
-                }`}
-              >
-                全分类
-              </button>
-              {CATEGORY_META.map(meta => (
-                <button
-                  key={meta.value}
-                  onClick={() => setCategory(meta.value)}
-                  className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-                    category === meta.value ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
-                  }`}
-                >
-                  {meta.label}
-                </button>
-              ))}
+                {CATEGORY_META.map(meta => (
+                  <button
+                    key={meta.value}
+                    onClick={() => setCategory(meta.value)}
+                    className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
+                      category === meta.value ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
+                    }`}
+                  >
+                    {meta.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        </details>
-      </Card>
+          </details>
+        </Card>
+        <Link to="/ledger/new" className="shrink-0">
+          <Button size="icon" aria-label="新增记录" className="h-[54px] w-[54px] rounded-[20px] shadow-[0_10px_22px_rgba(79,155,121,0.22)]">
+            <Plus className="h-5 w-5" />
+          </Button>
+        </Link>
+      </div>
 
       <LedgerSection title="资产" items={assets} empty="暂无资产记录" hidden={hidden} />
       <LedgerSection title="负债" items={liabilities} empty="暂无负债记录" hidden={hidden} />

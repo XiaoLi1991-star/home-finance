@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Check, CreditCard, WalletCards, type LucideIcon } from 'lucide-react'
+import { CalendarDays, Check, CreditCard, WalletCards, X, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
@@ -214,10 +215,10 @@ export default function LedgerEditor() {
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="开始月份">
-            <input className="input" type="month" value={startMonth} onChange={event => setStartMonth(event.target.value)} />
+            <MonthField value={startMonth} onChange={setStartMonth} />
           </Field>
           <Field label="结束月份">
-            <input className="input" type="month" value={endMonth} onChange={event => setEndMonth(event.target.value)} />
+            <MonthField value={endMonth} onChange={setEndMonth} placeholder="长期" clearable />
           </Field>
         </div>
 
@@ -260,6 +261,140 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </div>
   )
+}
+
+function MonthField({
+  value,
+  onChange,
+  placeholder = '选择月份',
+  clearable = false
+}: {
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  clearable?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [year, setYear] = useState(() => getMonthYear(value))
+
+  const selectMonth = (month: number) => {
+    onChange(`${year}-${String(month).padStart(2, '0')}`)
+    setOpen(false)
+  }
+
+  const dialog = open ? (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/30 px-3 pb-3 backdrop-blur-sm" role="dialog" aria-modal="true">
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        aria-label="关闭月份选择"
+        onClick={() => setOpen(false)}
+      />
+      <div className="relative w-full max-w-md overflow-hidden rounded-[24px] border border-white/70 bg-[#f8faf7] shadow-[0_18px_52px_rgba(24,37,31,0.22)]">
+        <div className="flex items-center justify-between border-b border-surface-border/80 px-4 py-3">
+          <div>
+            <p className="text-sm font-black text-ink">选择月份</p>
+            <p className="mt-1 text-xs text-ink-muted">用于统计这条记录的起止时间</p>
+          </div>
+          <button
+            type="button"
+            className="grid h-9 w-9 place-items-center rounded-full bg-white text-ink-muted active:bg-surface-dark"
+            aria-label="关闭月份选择"
+            onClick={() => setOpen(false)}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-4">
+          <div className="flex items-center justify-between rounded-2xl bg-white p-2">
+            <button
+              type="button"
+              className="rounded-xl px-4 py-2 text-sm font-bold text-ink-muted active:bg-surface-dark"
+              onClick={() => setYear(value => value - 1)}
+            >
+              上一年
+            </button>
+            <b className="text-lg text-ink">{year}</b>
+            <button
+              type="button"
+              className="rounded-xl px-4 py-2 text-sm font-bold text-brand-dark active:bg-brand-light"
+              onClick={() => setYear(value => value + 1)}
+            >
+              下一年
+            </button>
+          </div>
+
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {Array.from({ length: 12 }, (_, index) => index + 1).map(month => {
+              const monthValue = `${year}-${String(month).padStart(2, '0')}`
+              const selected = monthValue === value
+              return (
+                <button
+                  key={month}
+                  type="button"
+                  className={cn(
+                    'h-11 rounded-2xl border text-sm font-black transition active:scale-[0.98]',
+                    selected
+                      ? 'border-brand bg-brand text-white shadow-[0_8px_20px_rgba(79,155,121,0.16)]'
+                      : 'border-surface-border bg-white text-ink'
+                  )}
+                  onClick={() => selectMonth(month)}
+                >
+                  {month}月
+                </button>
+              )
+            })}
+          </div>
+
+          {clearable && (
+            <button
+              type="button"
+              className="mt-3 h-11 w-full rounded-2xl border border-dashed border-surface-border bg-white text-sm font-bold text-ink-muted active:bg-surface-dark"
+              onClick={() => {
+                onChange('')
+                setOpen(false)
+              }}
+            >
+              设为长期
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  ) : null
+
+  return (
+    <>
+      <button
+        type="button"
+        className={cn(
+          'input flex items-center justify-between gap-2 text-left',
+          value ? 'text-ink' : 'text-ink-light'
+        )}
+        onClick={() => {
+          setYear(getMonthYear(value))
+          setOpen(true)
+        }}
+      >
+        <span className="truncate">{value ? formatMonthLabel(value) : placeholder}</span>
+        <CalendarDays className="h-4 w-4 shrink-0 text-ink-muted" />
+      </button>
+      {dialog ? createPortal(dialog, document.body) : null}
+    </>
+  )
+}
+
+function getMonthYear(value: string) {
+  const parsed = Number(value.slice(0, 4))
+  if (Number.isFinite(parsed) && parsed > 1900) return parsed
+  return Number(getCurrentMonth().slice(0, 4))
+}
+
+function formatMonthLabel(value: string) {
+  const [year, month] = value.split('-')
+  if (!year || !month) return value
+  return `${year}年${month}月`
 }
 
 function KindChoice({
