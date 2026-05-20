@@ -1,21 +1,76 @@
 import { Link } from 'react-router-dom'
-import { ChevronDown, Plus, Search } from 'lucide-react'
+import { Car, ChevronDown, CreditCard, Home as HomeIcon, Plus, Search, ShieldCheck, TrendingUp, Wallet, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
-import { CATEGORY_META, getCategoryLabel, getStatusLabel, getSubTypeLabel } from '@/lib/v2/categories'
-import { formatWan } from '@/lib/utils'
+import { CATEGORY_META, getCategoryLabel, getStatusLabel, getSubTypeLabel, type CategoryMeta } from '@/lib/v2/categories'
+import { createLedgerDemoItems, isLedgerDemoMode } from '@/lib/demo/ledgerDemo'
+import { cn, formatWan } from '@/lib/utils'
 import { useLedgerStore } from '@/store/useLedgerStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
-import type { LedgerCategory, LedgerItem, LedgerKind } from '@/types/ledger'
-import { useMemo, useState } from 'react'
+import type { LedgerCategory, LedgerItem, LedgerKind, LedgerStatus } from '@/types/ledger'
+import { useEffect, useMemo, useState } from 'react'
+
+const CATEGORY_VISUALS: Record<LedgerCategory, {
+  icon: LucideIcon
+  accent: string
+  tint: string
+  chip: string
+  amount: string
+}> = {
+  cash_accounts: {
+    icon: Wallet,
+    accent: 'bg-brand',
+    tint: 'bg-[#eefaf5]',
+    chip: 'bg-brand-light/80 text-brand-dark',
+    amount: 'text-brand-dark'
+  },
+  investments: {
+    icon: TrendingUp,
+    accent: 'bg-[#4f7fb8]',
+    tint: 'bg-[#eef5ff]',
+    chip: 'bg-info-light/80 text-[#486c9f]',
+    amount: 'text-[#486c9f]'
+  },
+  insurance_pensions: {
+    icon: ShieldCheck,
+    accent: 'bg-[#8b8fb9]',
+    tint: 'bg-[#f1f2fb]',
+    chip: 'bg-[#e7e9f8] text-[#686fa3]',
+    amount: 'text-[#686fa3]'
+  },
+  property_real_estate: {
+    icon: HomeIcon,
+    accent: 'bg-[#c9a463]',
+    tint: 'bg-[#fff8e6]',
+    chip: 'bg-[#fff1c2] text-[#8a6a21]',
+    amount: 'text-[#8a6a21]'
+  },
+  vehicles_goods: {
+    icon: Car,
+    accent: 'bg-[#8b9a74]',
+    tint: 'bg-[#f3f7ec]',
+    chip: 'bg-[#e8efd8] text-[#66784b]',
+    amount: 'text-[#66784b]'
+  },
+  liabilities_loans: {
+    icon: CreditCard,
+    accent: 'bg-danger',
+    tint: 'bg-danger-light/50',
+    chip: 'bg-danger-light text-danger',
+    amount: 'text-danger'
+  }
+}
 
 export default function Ledger() {
-  const items = useLedgerStore(state => state.items)
+  const storedItems = useLedgerStore(state => state.items)
   const hidden = useSettingsStore(state => state.privacy.hideAmounts)
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState<LedgerKind | 'all'>('all')
   const [category, setCategory] = useState<LedgerCategory | 'all'>('all')
+  const demoMode = isLedgerDemoMode()
+  const items = useMemo(() => demoMode ? createLedgerDemoItems() : storedItems, [demoMode, storedItems])
+  const hasFocusedFilter = category !== 'all' || Boolean(query.trim())
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -27,14 +82,20 @@ export default function Ledger() {
     })
   }, [category, items, kind, query])
 
-  const assets = filtered.filter(item => item.kind === 'asset')
-  const liabilities = filtered.filter(item => item.kind === 'liability')
+  const grouped = useMemo(() => {
+    return CATEGORY_META
+      .map(meta => ({
+        meta,
+        items: filtered.filter(item => item.category === meta.value)
+      }))
+      .filter(group => group.items.length > 0)
+  }, [filtered])
 
   return (
     <div className="space-y-4 pb-24">
       <PageHeader
         title="台账"
-        subtitle="资产和负债都在这里"
+        subtitle={demoMode ? '演示数据，仅用于查看长列表效果' : '资产和负债都在这里'}
       />
 
       <div className="flex items-start gap-2">
@@ -99,31 +160,81 @@ export default function Ledger() {
         </Link>
       </div>
 
-      <LedgerSection title="资产" items={assets} empty="暂无资产记录" hidden={hidden} />
-      <LedgerSection title="负债" items={liabilities} empty="暂无负债记录" hidden={hidden} />
+      {grouped.length === 0 ? (
+        <Card className="p-6 text-center text-sm text-ink-muted">暂无符合条件的台账记录。</Card>
+      ) : (
+        <div className="space-y-5">
+          {grouped.map(group => (
+            <LedgerCategorySection
+              key={group.meta.value}
+              meta={group.meta}
+              items={group.items}
+              hidden={hidden}
+              forceExpanded={hasFocusedFilter}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
-function LedgerSection({ title, items, empty, hidden }: { title: string; items: LedgerItem[]; empty: string; hidden: boolean }) {
+function LedgerCategorySection({
+  meta,
+  items,
+  hidden,
+  forceExpanded
+}: {
+  meta: CategoryMeta
+  items: LedgerItem[]
+  hidden: boolean
+  forceExpanded: boolean
+}) {
   const [showEnded, setShowEnded] = useState(false)
   const currentItems = items.filter(item => item.status !== 'ended')
   const endedItems = items.filter(item => item.status === 'ended')
+  const visual = CATEGORY_VISUALS[meta.value]
+  const Icon = visual.icon
+  const currentTotal = sumAmounts(currentItems)
+  const hasPending = items.some(item => item.status === 'pending_confirmation' || item.status === 'draft')
+  const shouldDefaultExpand = forceExpanded || hasPending || meta.value === 'cash_accounts' || meta.value === 'investments' || meta.value === 'liabilities_loans'
+  const [expanded, setExpanded] = useState(shouldDefaultExpand)
+
+  useEffect(() => {
+    if (forceExpanded || hasPending) setExpanded(true)
+  }, [forceExpanded, hasPending])
 
   return (
-    <section>
-      <div className="mb-2 flex items-center justify-between px-1">
-        <h2 className="font-bold">{title}</h2>
-        <span className="text-xs text-ink-muted">
-          {currentItems.length} 项
-        </span>
-      </div>
+    <section className="space-y-2">
+      <button
+        type="button"
+        className={cn('flex w-full items-center justify-between gap-3 rounded-[18px] border border-white/80 px-3 py-2.5 text-left shadow-[0_10px_24px_rgba(36,53,47,0.05)] transition active:scale-[0.995]', visual.tint)}
+        aria-expanded={expanded}
+        onClick={() => setExpanded(value => !value)}
+      >
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm', visual.accent)}>
+            <Icon className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="truncate text-sm font-black">{meta.label}</h2>
+            <p className="mt-0.5 text-[11px] text-ink-muted">
+              当前 {currentItems.length} 项{endedItems.length > 0 ? ` · 已结束 ${endedItems.length} 项` : ''}
+            </p>
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-[10px] text-ink-muted">小计</p>
+          <p className={cn('mt-0.5 text-sm font-black', visual.amount)}>{formatWan(currentTotal, hidden)}</p>
+        </div>
+        <ChevronDown className={cn('h-4 w-4 shrink-0 text-ink-muted transition-transform', expanded && 'rotate-180')} />
+      </button>
       {items.length === 0 ? (
-        <Card className="p-6 text-center text-sm text-ink-muted">{empty}</Card>
-      ) : (
+        <Card className="p-6 text-center text-sm text-ink-muted">暂无记录</Card>
+      ) : expanded ? (
         <div className="space-y-2">
           {currentItems.length === 0 && (
-            <Card className="p-4 text-sm text-ink-muted">暂无有效记录，已结束项目在下方折叠。</Card>
+            <Card className="p-4 text-sm text-ink-muted">暂无当前记录，已结束项目在下方折叠。</Card>
           )}
           {currentItems.map(item => (
             <LedgerCard key={item.id} item={item} hidden={hidden} />
@@ -135,7 +246,7 @@ function LedgerSection({ title, items, empty, hidden }: { title: string; items: 
                 onClick={() => setShowEnded(value => !value)}
                 className="flex w-full items-center justify-between rounded-xl border border-dashed border-surface-border bg-surface-dim px-3 py-2 text-xs font-semibold text-ink-muted active:bg-surface-dark"
               >
-                <span>已结束{title} {endedItems.length} 项</span>
+                <span>已结束项目 {endedItems.length} 项</span>
                 <ChevronDown className={`h-4 w-4 transition-transform ${showEnded ? 'rotate-180' : ''}`} />
               </button>
               {showEnded && (
@@ -148,35 +259,66 @@ function LedgerSection({ title, items, empty, hidden }: { title: string; items: 
             </div>
           )}
         </div>
-      )}
+      ) : null}
     </section>
   )
 }
 
 function LedgerCard({ item, muted = false, hidden }: { item: LedgerItem; muted?: boolean; hidden: boolean }) {
+  const visual = CATEGORY_VISUALS[item.category]
+  const sourceLabel = getSourceLabel(item)
+  const statusTone = getStatusTone(item.status)
+
   return (
     <Link className="block" to={`/ledger/${item.id}`}>
-      <Card className={`${muted ? 'border-surface-border bg-surface-dim/80 p-3 opacity-70 grayscale' : 'p-4'} active:bg-surface-dim`}>
+      <Card className={cn('relative overflow-hidden active:bg-surface-dim', muted ? 'border-surface-border bg-surface-dim/80 p-3 opacity-70 grayscale' : 'bg-white/86 p-3')}>
+        <span className={cn('absolute left-0 top-0 h-full w-1', visual.accent)} />
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="truncate font-bold">{item.name}</p>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] ${muted ? 'bg-surface-border text-ink-muted' : 'bg-surface-dark text-ink-muted'}`}>
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="truncate text-[15px] font-black leading-tight">{item.name}</p>
+              <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold', muted ? 'bg-surface-border text-ink-muted' : statusTone)}>
                 {getStatusLabel(item.status)}
               </span>
             </div>
-            <p className="mt-1 text-xs text-ink-muted">
-              {getCategoryLabel(item.category)} · {getSubTypeLabel(item.category, item.subType)}
-            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-ink-muted">
+              <span className={cn('rounded-full px-2 py-0.5 font-semibold', muted ? 'bg-surface-border text-ink-muted' : visual.chip)}>
+                {getSubTypeLabel(item.category, item.subType)}
+              </span>
+              {sourceLabel && <span>{sourceLabel}</span>}
+              <span>开始 {item.startMonth}</span>
+            </div>
           </div>
-          <p className={`shrink-0 text-right font-black ${muted ? 'text-ink-light' : item.kind === 'asset' ? 'text-brand-dark' : 'text-danger'}`}>
+          <p className={cn('shrink-0 text-right text-base font-black leading-tight', muted ? 'text-ink-light' : item.kind === 'asset' ? visual.amount : 'text-danger')}>
             {item.kind === 'asset' ? '+' : '-'}
             {formatWan(item.amount, hidden)}
           </p>
         </div>
+        {(item.note || item.migrationWarnings?.length) && (
+          <p className="mt-2 line-clamp-1 rounded-lg bg-surface-dim px-2.5 py-1.5 text-xs text-ink-muted">
+            {item.note || item.migrationWarnings?.[0]}
+          </p>
+        )}
       </Card>
     </Link>
   )
+}
+
+function sumAmounts(items: LedgerItem[]) {
+  return items.reduce((total, item) => total + item.amount, 0)
+}
+
+function getStatusTone(status: LedgerStatus) {
+  if (status === 'active') return 'bg-brand-light/70 text-brand-dark'
+  if (status === 'pending_confirmation') return 'bg-[#fff1c2] text-[#8a6a21]'
+  if (status === 'draft') return 'bg-surface-dark text-ink-muted'
+  return 'bg-surface-border text-ink-muted'
+}
+
+function getSourceLabel(item: LedgerItem) {
+  if (item.source.system === 'ai_entry') return 'AI 录入'
+  if (item.source.system === 'v1_migration' || item.source.system === 'ai_migration') return '迁移'
+  return ''
 }
 
 function getFilterLabel(kind: LedgerKind | 'all', category: LedgerCategory | 'all', query: string) {
