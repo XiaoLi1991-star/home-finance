@@ -4,6 +4,16 @@
 
 它不是记账软件的完整替代品，更像一本放在手机里的「家庭资产簿」：把银行卡、现金、基金、房贷、借款、长期资产这些信息放在一起，定期确认一次，看看家庭资产是在变稳、变松，还是需要多留意。
 
+## 操作演示
+
+点击下方动图可以打开高清版 Android 操作演示。
+
+<p>
+  <a href="docs/media/home-finance-demo-android.mp4">
+    <img src="docs/media/home-finance-demo-preview.gif" alt="Home Finance Android 操作演示" width="360">
+  </a>
+</p>
+
 ## 适合谁
 
 - 想定期看清家庭净资产的人
@@ -40,12 +50,6 @@
 目前提供的是 debug APK，适合自用和小范围试用。安装时 Android 可能会提示「未知来源」或「调试版本」，这是正常现象。
 
 如果你已经安装过旧版本，直接覆盖安装通常可以保留本机数据。为了稳妥，升级前建议先在设置里导出一次备份。
-
-## 操作演示
-
-可以先看一段 Android 版操作演示，了解首页、台账、月度确认和洞察页的大致使用方式：
-
-[查看操作演示视频](docs/media/home-finance-demo-android.mp4)
 
 ## 使用建议
 
