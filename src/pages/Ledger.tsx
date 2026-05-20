@@ -9,7 +9,7 @@ import { cn, formatWan } from '@/lib/utils'
 import { useLedgerStore } from '@/store/useLedgerStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
 import type { LedgerCategory, LedgerItem, LedgerKind, LedgerStatus } from '@/types/ledger'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 const CATEGORY_VISUALS: Record<LedgerCategory, {
   icon: LucideIcon
@@ -197,19 +197,15 @@ function LedgerCategorySection({
   const Icon = visual.icon
   const currentTotal = sumAmounts(currentItems)
   const hasPending = items.some(item => item.status === 'pending_confirmation' || item.status === 'draft')
-  const shouldDefaultExpand = forceExpanded || hasPending || meta.value === 'cash_accounts' || meta.value === 'investments' || meta.value === 'liabilities_loans'
-  const [expanded, setExpanded] = useState(shouldDefaultExpand)
-
-  useEffect(() => {
-    if (forceExpanded || hasPending) setExpanded(true)
-  }, [forceExpanded, hasPending])
+  const [expanded, setExpanded] = useState(false)
+  const visibleExpanded = expanded || forceExpanded || hasPending
 
   return (
     <section className="space-y-2">
       <button
         type="button"
         className={cn('flex w-full items-center justify-between gap-3 rounded-[18px] border border-white/80 px-3 py-2.5 text-left shadow-[0_10px_24px_rgba(36,53,47,0.05)] transition active:scale-[0.995]', visual.tint)}
-        aria-expanded={expanded}
+        aria-expanded={visibleExpanded}
         onClick={() => setExpanded(value => !value)}
       >
         <div className="flex min-w-0 items-center gap-2.5">
@@ -227,11 +223,11 @@ function LedgerCategorySection({
           <p className="text-[10px] text-ink-muted">小计</p>
           <p className={cn('mt-0.5 text-sm font-black', visual.amount)}>{formatWan(currentTotal, hidden)}</p>
         </div>
-        <ChevronDown className={cn('h-4 w-4 shrink-0 text-ink-muted transition-transform', expanded && 'rotate-180')} />
+        <ChevronDown className={cn('h-4 w-4 shrink-0 text-ink-muted transition-transform', visibleExpanded && 'rotate-180')} />
       </button>
       {items.length === 0 ? (
         <Card className="p-6 text-center text-sm text-ink-muted">暂无记录</Card>
-      ) : expanded ? (
+      ) : visibleExpanded ? (
         <div className="space-y-2">
           {currentItems.length === 0 && (
             <Card className="p-4 text-sm text-ink-muted">暂无当前记录，已结束项目在下方折叠。</Card>
