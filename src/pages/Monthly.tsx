@@ -1,17 +1,81 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Upload } from 'lucide-react'
+import {
+  Car,
+  CheckCircle2,
+  Clock3,
+  CreditCard,
+  Home as HomeIcon,
+  Plus,
+  ShieldCheck,
+  TrendingUp,
+  Upload,
+  Wallet,
+  type LucideIcon
+} from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
 import { createFailedReport, generateMonthlyAiReport } from '@/lib/ai/reports'
 import { getAiApiKey } from '@/lib/native/secrets'
-import { getCategoryLabel, getStatusLabel } from '@/lib/v2/categories'
+import { getCategoryLabel, getStatusLabel, getSubTypeLabel } from '@/lib/v2/categories'
 import { compareMonth, currentMonthKey } from '@/lib/v2/migration'
-import { formatWan } from '@/lib/utils'
+import { cn, formatWan } from '@/lib/utils'
 import { releaseScreenWakeLock, requestScreenWakeLock } from '@/lib/wakeLock'
 import { useLedgerStore } from '@/store/useLedgerStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
+import type { LedgerCategory, LedgerItem } from '@/types/ledger'
+
+const MONTHLY_CATEGORY_VISUALS: Record<LedgerCategory, {
+  icon: LucideIcon
+  accent: string
+  tint: string
+  chip: string
+  amount: string
+}> = {
+  cash_accounts: {
+    icon: Wallet,
+    accent: 'bg-brand',
+    tint: 'bg-[#eefaf5]',
+    chip: 'bg-brand-light/80 text-brand-dark',
+    amount: 'text-brand-dark'
+  },
+  investments: {
+    icon: TrendingUp,
+    accent: 'bg-[#4f7fb8]',
+    tint: 'bg-[#eef5ff]',
+    chip: 'bg-info-light/80 text-[#486c9f]',
+    amount: 'text-[#486c9f]'
+  },
+  insurance_pensions: {
+    icon: ShieldCheck,
+    accent: 'bg-[#8b8fb9]',
+    tint: 'bg-[#f1f2fb]',
+    chip: 'bg-[#e7e9f8] text-[#686fa3]',
+    amount: 'text-[#686fa3]'
+  },
+  property_real_estate: {
+    icon: HomeIcon,
+    accent: 'bg-[#c9a463]',
+    tint: 'bg-[#fff8e6]',
+    chip: 'bg-[#fff1c2] text-[#8a6a21]',
+    amount: 'text-[#8a6a21]'
+  },
+  vehicles_goods: {
+    icon: Car,
+    accent: 'bg-[#8b9a74]',
+    tint: 'bg-[#f3f7ec]',
+    chip: 'bg-[#e8efd8] text-[#66784b]',
+    amount: 'text-[#66784b]'
+  },
+  liabilities_loans: {
+    icon: CreditCard,
+    accent: 'bg-danger',
+    tint: 'bg-danger-light/50',
+    chip: 'bg-danger-light text-danger',
+    amount: 'text-danger'
+  }
+}
 
 export default function Monthly() {
   const items = useLedgerStore(state => state.items)
@@ -94,35 +158,16 @@ export default function Monthly() {
         <Card className="p-6 text-center text-sm text-ink-muted">暂无需要确认的项目。</Card>
       ) : (
         <div className="space-y-2">
-          {focusItems.map(item => {
-            const shouldEnd = item.endMonth && compareMonth(item.endMonth, month) <= 0 && item.status === 'active'
-            const needsAction = item.status === 'pending_confirmation' || shouldEnd
-            return (
-              <Card key={item.id} className="p-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="truncate text-[15px] font-bold leading-tight">{item.name}</p>
-                    <p className="mt-1 text-xs text-ink-muted">{getCategoryLabel(item.category)} · {getStatusLabel(item.status)}</p>
-                    {shouldEnd && <p className="mt-1 text-xs text-danger">可能已到结束月份，请确认。</p>}
-                  </div>
-                  <p className={`shrink-0 text-right text-base font-black ${item.kind === 'liability' ? 'text-danger' : 'text-brand-dark'}`}>
-                    {item.kind === 'liability' ? '-' : '+'}
-                    {formatWan(item.amount, hidden)}
-                  </p>
-                </div>
-                {needsAction && (
-                  <div className="mt-2 flex gap-2">
-                    {item.status === 'pending_confirmation' && (
-                      <Button size="sm" onClick={() => confirmItem(item.id)}>确认有效</Button>
-                    )}
-                    {shouldEnd && (
-                      <Button size="sm" variant="danger" onClick={() => endItem(item.id)}>确认结束</Button>
-                    )}
-                  </div>
-                )}
-              </Card>
-            )
-          })}
+          {focusItems.map(item => (
+            <MonthlyFocusItemCard
+              key={item.id}
+              item={item}
+              month={month}
+              hidden={hidden}
+              onConfirm={confirmItem}
+              onEnd={endItem}
+            />
+          ))}
         </div>
       )}
 
@@ -183,5 +228,85 @@ export default function Monthly() {
         </Card>
       )}
     </div>
+  )
+}
+
+function MonthlyFocusItemCard({
+  item,
+  month,
+  hidden,
+  onConfirm,
+  onEnd
+}: {
+  item: LedgerItem
+  month: string
+  hidden: boolean
+  onConfirm: (id: string) => void
+  onEnd: (id: string) => void
+}) {
+  const shouldEnd = Boolean(item.endMonth && compareMonth(item.endMonth, month) <= 0 && item.status === 'active')
+  const needsAction = item.status === 'pending_confirmation' || shouldEnd
+  const visual = MONTHLY_CATEGORY_VISUALS[item.category]
+  const Icon = visual.icon
+
+  return (
+    <Card className={cn('relative overflow-hidden border-white/80 bg-white/90 p-0', needsAction && 'ring-1 ring-brand/20')}>
+      <span className={cn('absolute left-0 top-0 h-full w-1', visual.accent)} />
+      <div className={cn('flex items-start gap-3 px-3 py-3', visual.tint)}>
+        <span className={cn('mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm', visual.accent)}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <h3 className="truncate text-[15px] font-black leading-tight">{item.name}</h3>
+            {needsAction && (
+              <span className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-brand-dark">
+                待处理
+              </span>
+            )}
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-ink-muted">
+            <span className={cn('rounded-full px-2 py-0.5 font-semibold', visual.chip)}>
+              {getCategoryLabel(item.category)}
+            </span>
+            <span className="rounded-full bg-white/70 px-2 py-0.5">
+              {getSubTypeLabel(item.category, item.subType)}
+            </span>
+            <span className="rounded-full bg-white/70 px-2 py-0.5">
+              {getStatusLabel(item.status)}
+            </span>
+          </div>
+        </div>
+        <p className={cn('shrink-0 text-right text-base font-black leading-tight', item.kind === 'liability' ? 'text-danger' : visual.amount)}>
+          {item.kind === 'liability' ? '-' : '+'}
+          {formatWan(item.amount, hidden)}
+        </p>
+      </div>
+
+      {(needsAction || item.note) && (
+        <div className="space-y-2 px-3 py-2.5">
+          {needsAction && (
+            <div className={cn('flex items-start gap-2 rounded-xl px-3 py-2 text-xs', shouldEnd ? 'bg-danger-light/60 text-danger' : 'bg-brand-light/50 text-brand-dark')}>
+              {shouldEnd ? <Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> : <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />}
+              <span>{shouldEnd ? `结束月份为 ${item.endMonth}，本月需要确认是否结束。` : '这条记录确认后，会纳入本月快照。'}</span>
+            </div>
+          )}
+          {item.note && (
+            <p className="line-clamp-1 rounded-xl bg-surface-dim px-3 py-2 text-xs text-ink-muted">{item.note}</p>
+          )}
+        </div>
+      )}
+
+      {needsAction && (
+        <div className="flex gap-2 px-3 pb-3">
+          {item.status === 'pending_confirmation' && (
+            <Button size="sm" className="flex-1" onClick={() => onConfirm(item.id)}>确认有效</Button>
+          )}
+          {shouldEnd && (
+            <Button size="sm" variant="danger" className="flex-1" onClick={() => onEnd(item.id)}>确认结束</Button>
+          )}
+        </div>
+      )}
+    </Card>
   )
 }
