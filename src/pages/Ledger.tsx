@@ -20,45 +20,45 @@ const CATEGORY_VISUALS: Record<LedgerCategory, {
 }> = {
   cash_accounts: {
     icon: Wallet,
-    accent: 'bg-brand',
-    tint: 'bg-[#eefaf5]',
-    chip: 'bg-brand-light/80 text-brand-dark',
-    amount: 'text-brand-dark'
+    accent: 'bg-[#2f9d84]',
+    tint: 'bg-[#eef8f4]',
+    chip: 'bg-[#dff2eb] text-[#347c6f]',
+    amount: 'text-[#347c6f]'
   },
   investments: {
     icon: TrendingUp,
-    accent: 'bg-[#4f7fb8]',
-    tint: 'bg-[#eef5ff]',
-    chip: 'bg-info-light/80 text-[#486c9f]',
-    amount: 'text-[#486c9f]'
+    accent: 'bg-[#5f85ad]',
+    tint: 'bg-[#eef4fb]',
+    chip: 'bg-[#e4edf7] text-[#4d6f95]',
+    amount: 'text-[#4d6f95]'
   },
   insurance_pensions: {
     icon: ShieldCheck,
-    accent: 'bg-[#8b8fb9]',
-    tint: 'bg-[#f1f2fb]',
-    chip: 'bg-[#e7e9f8] text-[#686fa3]',
-    amount: 'text-[#686fa3]'
+    accent: 'bg-[#8587aa]',
+    tint: 'bg-[#f2f2fa]',
+    chip: 'bg-[#e8e9f4] text-[#686b99]',
+    amount: 'text-[#686b99]'
   },
   property_real_estate: {
     icon: HomeIcon,
-    accent: 'bg-[#c9a463]',
-    tint: 'bg-[#fff8e6]',
-    chip: 'bg-[#fff1c2] text-[#8a6a21]',
-    amount: 'text-[#8a6a21]'
+    accent: 'bg-[#b9955a]',
+    tint: 'bg-[#fbf5e8]',
+    chip: 'bg-[#f4ead4] text-[#7e6435]',
+    amount: 'text-[#7e6435]'
   },
   vehicles_goods: {
     icon: Car,
-    accent: 'bg-[#8b9a74]',
-    tint: 'bg-[#f3f7ec]',
-    chip: 'bg-[#e8efd8] text-[#66784b]',
-    amount: 'text-[#66784b]'
+    accent: 'bg-[#7f8d6c]',
+    tint: 'bg-[#f4f7ef]',
+    chip: 'bg-[#e7eddd] text-[#63714f]',
+    amount: 'text-[#63714f]'
   },
   liabilities_loans: {
     icon: CreditCard,
-    accent: 'bg-danger',
-    tint: 'bg-danger-light/50',
-    chip: 'bg-danger-light text-danger',
-    amount: 'text-danger'
+    accent: 'bg-[#b56b6b]',
+    tint: 'bg-[#fbf0ef]',
+    chip: 'bg-[#f3dedb] text-[#8f5353]',
+    amount: 'text-[#8f5353]'
   }
 }
 
@@ -124,7 +124,7 @@ export default function Ledger() {
                     key={value}
                     onClick={() => setKind(value)}
                     className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-                      kind === value ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
+                      kind === value ? 'bg-[#2f9d84] text-white' : 'bg-surface-dark text-ink-muted'
                     }`}
                   >
                     {value === 'all' ? '全部' : value === 'asset' ? '资产' : '负债'}
@@ -133,7 +133,7 @@ export default function Ledger() {
                 <button
                   onClick={() => setCategory('all')}
                   className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-                    category === 'all' ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
+                    category === 'all' ? 'bg-[#2f9d84] text-white' : 'bg-surface-dark text-ink-muted'
                   }`}
                 >
                   全分类
@@ -143,7 +143,7 @@ export default function Ledger() {
                     key={meta.value}
                     onClick={() => setCategory(meta.value)}
                     className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-                      category === meta.value ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
+                      category === meta.value ? 'bg-[#2f9d84] text-white' : 'bg-surface-dark text-ink-muted'
                     }`}
                   >
                     {meta.label}
@@ -154,7 +154,7 @@ export default function Ledger() {
           </details>
         </Card>
         <Link to="/ledger/new" className="shrink-0">
-          <Button size="icon" aria-label="新增记录" className="h-[54px] w-[54px] rounded-[20px] shadow-[0_10px_22px_rgba(79,155,121,0.22)]">
+          <Button size="icon" aria-label="新增记录" className="h-[54px] w-[54px] rounded-[20px] bg-[#2f9d84] shadow-[0_10px_22px_rgba(47,157,132,0.18)] active:bg-[#287f6f]">
             <Plus className="h-5 w-5" />
           </Button>
         </Link>
@@ -285,7 +285,7 @@ function LedgerCard({ item, muted = false, hidden }: { item: LedgerItem; muted?:
               <span>开始 {item.startMonth}</span>
             </div>
           </div>
-          <p className={cn('shrink-0 text-right text-base font-black leading-tight', muted ? 'text-ink-light' : item.kind === 'asset' ? visual.amount : 'text-danger')}>
+          <p className={cn('shrink-0 text-right text-base font-black leading-tight', muted ? 'text-ink-light' : visual.amount)}>
             {item.kind === 'asset' ? '+' : '-'}
             {formatWan(item.amount, hidden)}
           </p>
@@ -305,7 +305,7 @@ function sumAmounts(items: LedgerItem[]) {
 }
 
 function getStatusTone(status: LedgerStatus) {
-  if (status === 'active') return 'bg-brand-light/70 text-brand-dark'
+  if (status === 'active') return 'bg-[#e5f3ed] text-[#347c6f]'
   if (status === 'pending_confirmation') return 'bg-[#fff1c2] text-[#8a6a21]'
   if (status === 'draft') return 'bg-surface-dark text-ink-muted'
   return 'bg-surface-border text-ink-muted'

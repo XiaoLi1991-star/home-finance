@@ -35,45 +35,45 @@ const MONTHLY_CATEGORY_VISUALS: Record<LedgerCategory, {
 }> = {
   cash_accounts: {
     icon: Wallet,
-    accent: 'bg-brand',
-    tint: 'bg-[#eefaf5]',
-    chip: 'bg-brand-light/80 text-brand-dark',
-    amount: 'text-brand-dark'
+    accent: 'bg-[#2f9d84]',
+    tint: 'bg-[#eef8f4]',
+    chip: 'bg-[#dff2eb] text-[#347c6f]',
+    amount: 'text-[#347c6f]'
   },
   investments: {
     icon: TrendingUp,
-    accent: 'bg-[#4f7fb8]',
-    tint: 'bg-[#eef5ff]',
-    chip: 'bg-info-light/80 text-[#486c9f]',
-    amount: 'text-[#486c9f]'
+    accent: 'bg-[#5f85ad]',
+    tint: 'bg-[#eef4fb]',
+    chip: 'bg-[#e4edf7] text-[#4d6f95]',
+    amount: 'text-[#4d6f95]'
   },
   insurance_pensions: {
     icon: ShieldCheck,
-    accent: 'bg-[#8b8fb9]',
-    tint: 'bg-[#f1f2fb]',
-    chip: 'bg-[#e7e9f8] text-[#686fa3]',
-    amount: 'text-[#686fa3]'
+    accent: 'bg-[#8587aa]',
+    tint: 'bg-[#f2f2fa]',
+    chip: 'bg-[#e8e9f4] text-[#686b99]',
+    amount: 'text-[#686b99]'
   },
   property_real_estate: {
     icon: HomeIcon,
-    accent: 'bg-[#c9a463]',
-    tint: 'bg-[#fff8e6]',
-    chip: 'bg-[#fff1c2] text-[#8a6a21]',
-    amount: 'text-[#8a6a21]'
+    accent: 'bg-[#b9955a]',
+    tint: 'bg-[#fbf5e8]',
+    chip: 'bg-[#f4ead4] text-[#7e6435]',
+    amount: 'text-[#7e6435]'
   },
   vehicles_goods: {
     icon: Car,
-    accent: 'bg-[#8b9a74]',
-    tint: 'bg-[#f3f7ec]',
-    chip: 'bg-[#e8efd8] text-[#66784b]',
-    amount: 'text-[#66784b]'
+    accent: 'bg-[#7f8d6c]',
+    tint: 'bg-[#f4f7ef]',
+    chip: 'bg-[#e7eddd] text-[#63714f]',
+    amount: 'text-[#63714f]'
   },
   liabilities_loans: {
     icon: CreditCard,
-    accent: 'bg-danger',
-    tint: 'bg-danger-light/50',
-    chip: 'bg-danger-light text-danger',
-    amount: 'text-danger'
+    accent: 'bg-[#b56b6b]',
+    tint: 'bg-[#fbf0ef]',
+    chip: 'bg-[#f3dedb] text-[#8f5353]',
+    amount: 'text-[#8f5353]'
   }
 }
 
@@ -110,13 +110,13 @@ export default function Monthly() {
       <PageHeader title="月度确认" subtitle={`${month} · 重点确认与快照`} />
 
       {notice && (
-        <Card className={`p-3 text-sm ${notice.tone === 'error' ? 'border-danger-light bg-danger-light text-danger' : 'text-ink-muted'}`}>
+        <Card className={`p-3 text-sm ${notice.tone === 'error' ? 'border-[#f0d6d2] bg-[#f8eeee] text-[#8f5353]' : 'text-ink-muted'}`}>
           {notice.text}
         </Card>
       )}
 
       {monthlyReportAutoGenerate && (
-        <Card className={`p-3 text-sm shadow-none ${saving ? 'border-brand-light bg-brand-light/45 text-brand-dark' : 'border-surface-dark bg-white/70 text-ink-muted'}`}>
+        <Card className={`p-3 text-sm shadow-none ${saving ? 'border-[#d9eee6] bg-[#edf7f2] text-[#347c6f]' : 'border-surface-dark bg-white/70 text-ink-muted'}`}>
           <p className="font-semibold text-ink">生成 AI 月报时请保持 App 在前台</p>
           <p className="mt-1 leading-5">
             {saving
@@ -126,9 +126,9 @@ export default function Monthly() {
         </Card>
       )}
 
-      <Card className="border-brand-light bg-brand-light/35 p-3 shadow-none">
+      <Card className="border-[#d9eee6] bg-[#edf7f2] p-3 shadow-none">
         <div className="flex items-start gap-3">
-          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand" />
+          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#3f9b7f]" />
           <div>
             <h2 className="font-bold">本月重点项</h2>
             <p className="mt-0.5 text-xs leading-5 text-ink-muted">现金、投资、贷款和待确认记录会优先出现在这里。</p>
@@ -174,7 +174,7 @@ export default function Monthly() {
       <Button
         size="lg"
         variant={hasSnapshotRecords ? 'primary' : 'secondary'}
-        className={hasSnapshotRecords ? 'w-full' : 'w-full border-dashed bg-surface-dim text-ink-muted shadow-none'}
+        className={hasSnapshotRecords ? 'w-full bg-[#2f9d84] shadow-[0_8px_18px_rgba(47,157,132,0.18)] active:bg-[#287f6f]' : 'w-full border-dashed bg-surface-dim text-ink-muted shadow-none'}
         disabled={saving || !hasSnapshotRecords}
         onClick={async () => {
           if (!hasSnapshotRecords) return
@@ -216,8 +216,8 @@ export default function Monthly() {
               <p className="text-xs text-ink-muted">资产</p>
               <b>{formatWan(latest.totals.totalAssets, hidden)}</b>
             </div>
-            <div className="rounded-xl bg-[#f8f1f1] p-3">
-              <p className="text-xs text-danger">负债</p>
+            <div className="rounded-xl bg-[#f8eeee] p-3">
+              <p className="text-xs text-[#8f5353]">负债</p>
               <b>{formatWan(latest.totals.totalLiabilities, hidden)}</b>
             </div>
             <div className="rounded-xl bg-surface-dim p-3">
@@ -250,7 +250,7 @@ function MonthlyFocusItemCard({
   const Icon = visual.icon
 
   return (
-    <Card className={cn('relative overflow-hidden border-white/80 bg-white/90 p-0', needsAction && 'ring-1 ring-brand/20')}>
+    <Card className={cn('relative overflow-hidden border-white/80 bg-white/90 p-0', needsAction && 'ring-1 ring-[#8fb7a9]/30')}>
       <span className={cn('absolute left-0 top-0 h-full w-1', visual.accent)} />
       <div className={cn('flex items-start gap-3 px-3 py-3', visual.tint)}>
         <span className={cn('mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm', visual.accent)}>
@@ -260,7 +260,7 @@ function MonthlyFocusItemCard({
           <div className="flex min-w-0 items-center gap-2">
             <h3 className="truncate text-[15px] font-black leading-tight">{item.name}</h3>
             {needsAction && (
-              <span className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-brand-dark">
+              <span className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-[#347c6f]">
                 待处理
               </span>
             )}
@@ -277,7 +277,7 @@ function MonthlyFocusItemCard({
             </span>
           </div>
         </div>
-        <p className={cn('shrink-0 text-right text-base font-black leading-tight', item.kind === 'liability' ? 'text-danger' : visual.amount)}>
+        <p className={cn('shrink-0 text-right text-base font-black leading-tight', visual.amount)}>
           {item.kind === 'liability' ? '-' : '+'}
           {formatWan(item.amount, hidden)}
         </p>
@@ -286,7 +286,7 @@ function MonthlyFocusItemCard({
       {(needsAction || item.note) && (
         <div className="space-y-2 px-3 py-2.5">
           {needsAction && (
-            <div className={cn('flex items-start gap-2 rounded-xl px-3 py-2 text-xs', shouldEnd ? 'bg-danger-light/60 text-danger' : 'bg-brand-light/50 text-brand-dark')}>
+            <div className={cn('flex items-start gap-2 rounded-xl px-3 py-2 text-xs', shouldEnd ? 'bg-[#f7e9e7] text-[#8f5353]' : 'bg-[#e5f3ed] text-[#347c6f]')}>
               {shouldEnd ? <Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> : <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />}
               <span>{shouldEnd ? `结束月份为 ${item.endMonth}，本月需要确认是否结束。` : '这条记录确认后，会纳入本月快照。'}</span>
             </div>
