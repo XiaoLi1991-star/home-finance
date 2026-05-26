@@ -6,18 +6,14 @@
 
 ## 操作演示
 
-点击下方动图可以打开高清版 Android 操作演示，也可以直接下载当前 APK 体验。
+下方动图展示 AI 记一笔、确认入账、生成月报和切换月报背景的完整流程，也可以直接下载当前 APK 体验。
 
 <p>
-  <a href="docs/media/home-finance-demo-android.mp4">
-    <img src="docs/media/home-finance-demo-preview.gif" alt="Home Finance Android 操作演示" width="360">
-  </a>
+  <img src="docs/media/home-finance-demo-preview.gif" alt="Home Finance Android 操作演示" width="360">
 </p>
 
 <p>
-  <a href="docs/media/home-finance-demo-android.mp4">查看高清演示视频</a>
-  ·
-  <a href="https://github.com/XiaoLi1991-star/home-finance/releases/tag/v0.1.6-debug.20260521">下载最新版 APK</a>
+  <a href="https://github.com/XiaoLi1991-star/home-finance/releases/tag/v0.1.8-debug.20260526">下载最新版 APK</a>
 </p>
 
 ## 适合谁
@@ -51,7 +47,7 @@
 
 ## 安装
 
-可以在 [GitHub Releases](https://github.com/XiaoLi1991-star/home-finance/releases/tag/v0.1.6-debug.20260521) 里下载 APK。
+可以在 [GitHub Releases](https://github.com/XiaoLi1991-star/home-finance/releases/tag/v0.1.8-debug.20260526) 里下载 APK。
 
 目前提供的是 debug APK，适合自用和小范围试用。安装时 Android 可能会提示「未知来源」或「调试版本」，这是正常现象。
 
