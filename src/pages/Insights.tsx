@@ -198,14 +198,19 @@ export default function Insights() {
               const tone = getCategoryTone(row.category)
               return (
                 <div key={row.category}>
-                  <div className="mb-1 flex justify-between gap-3 text-sm">
-                    <span>{row.label}</span>
-                    <b className={tone.text}>{formatWan(row.amount, hidden)}</b>
+                  <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+                    <span className="min-w-0 truncate">{row.label}</span>
+                    <b className="shrink-0 text-right" style={{ color: tone.text }}>
+                      {formatWan(row.amount, hidden)}
+                    </b>
                   </div>
-                  <div className={cn('h-2 overflow-hidden rounded-full', tone.track)}>
+                  <div className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: tone.track }}>
                     <div
-                      className={cn('h-full rounded-full', tone.bar)}
-                      style={{ width: hidden ? '24%' : `${Math.max(4, (row.amount / maxCategory) * 100)}%` }}
+                      className="h-full rounded-full"
+                      style={{
+                        width: hidden ? '24%' : `${Math.max(4, (row.amount / maxCategory) * 100)}%`,
+                        backgroundColor: tone.bar
+                      }}
                     />
                   </div>
                 </div>
@@ -278,9 +283,9 @@ function TrendCard({ trend, hidden, demoMode }: { trend: TrendPoint[]; hidden: b
                   contentStyle={{ borderRadius: 14, borderColor: '#dfe8e2', boxShadow: '0 12px 30px rgba(36,53,47,0.10)' }}
                   labelStyle={{ color: '#24352f', fontWeight: 800 }}
                 />
-                <Line type="monotone" dataKey="totalAssets" name="资产" stroke="#4f9b79" strokeWidth={2.4} dot={trend.length <= 1} activeDot={{ r: 5 }} />
-                <Line type="monotone" dataKey="totalLiabilities" name="负债" stroke="#b65d5d" strokeWidth={2.4} dot={trend.length <= 1} activeDot={{ r: 5 }} />
-                <Line type="monotone" dataKey="netWorth" name="净资产" stroke="#486c9f" strokeWidth={2.8} dot={trend.length <= 1} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="totalAssets" name="资产" stroke="#78b7a8" strokeWidth={2.4} dot={trend.length <= 1} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="totalLiabilities" name="负债" stroke="#c18482" strokeWidth={2.4} dot={trend.length <= 1} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="netWorth" name="净资产" stroke="#6f8fb2" strokeWidth={2.8} dot={trend.length <= 1} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -297,10 +302,12 @@ function TrendCard({ trend, hidden, demoMode }: { trend: TrendPoint[]; hidden: b
 }
 
 function TrendMetric({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'good' | 'risk' }) {
+  const color = tone === 'good' ? '#3f776d' : tone === 'risk' ? '#8f5f5e' : '#4d6f95'
+
   return (
     <div className="rounded-2xl bg-surface-dim px-3 py-2">
       <p className="text-[11px] text-ink-muted">{label}</p>
-      <p className={cn('mt-1 truncate text-sm font-black', tone === 'good' && 'text-brand-dark', tone === 'risk' && 'text-danger')}>
+      <p className="mt-1 truncate text-sm font-black" style={{ color }}>
         {value}
       </p>
     </div>
@@ -646,9 +653,9 @@ function inferBackgroundStyleFromPrompt(prompt?: string): ReportBackgroundStyleI
 function getCategoryTone(category: LedgerCategory) {
   const isLiability = category === 'liabilities_loans'
   return {
-    bar: isLiability ? 'bg-danger' : 'bg-brand',
-    track: isLiability ? 'bg-danger-light/70' : 'bg-surface-dark',
-    text: isLiability ? 'text-danger' : 'text-ink'
+    bar: isLiability ? '#c18482' : '#78b7a8',
+    track: isLiability ? '#fbf0ef' : '#eef8f4',
+    text: isLiability ? '#8f5f5e' : '#3f776d'
   }
 }
 

@@ -12,7 +12,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       primary: 'bg-brand text-white shadow-[0_8px_18px_rgba(79,155,121,0.22)] active:bg-[#3f8064]',
       secondary: 'bg-white text-ink border border-surface-border shadow-[0_6px_14px_rgba(36,53,47,0.05)] active:bg-surface-dark',
       ghost: 'bg-transparent text-ink-muted active:bg-surface-border',
-      danger: 'bg-[#b65d5d] text-white active:bg-[#9f4d4d]'
+      danger: 'bg-danger text-white active:bg-[#9f4d4d]'
     }
     const sizes = {
       sm: 'h-9 px-3 text-sm',

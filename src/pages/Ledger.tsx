@@ -20,7 +20,7 @@ const CATEGORY_VISUALS: Record<LedgerCategory, {
 }> = {
   cash_accounts: {
     icon: Wallet,
-    accent: 'bg-[#2f9d84]',
+    accent: 'bg-brand',
     tint: 'bg-[#eef8f4]',
     chip: 'bg-[#dff2eb] text-[#347c6f]',
     amount: 'text-[#347c6f]'
@@ -124,7 +124,7 @@ export default function Ledger() {
                     key={value}
                     onClick={() => setKind(value)}
                     className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-                      kind === value ? 'bg-[#2f9d84] text-white' : 'bg-surface-dark text-ink-muted'
+                    kind === value ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
                     }`}
                   >
                     {value === 'all' ? '全部' : value === 'asset' ? '资产' : '负债'}
@@ -133,7 +133,7 @@ export default function Ledger() {
                 <button
                   onClick={() => setCategory('all')}
                   className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-                    category === 'all' ? 'bg-[#2f9d84] text-white' : 'bg-surface-dark text-ink-muted'
+                    category === 'all' ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
                   }`}
                 >
                   全分类
@@ -143,7 +143,7 @@ export default function Ledger() {
                     key={meta.value}
                     onClick={() => setCategory(meta.value)}
                     className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-                      category === meta.value ? 'bg-[#2f9d84] text-white' : 'bg-surface-dark text-ink-muted'
+                      category === meta.value ? 'bg-brand text-white' : 'bg-surface-dark text-ink-muted'
                     }`}
                   >
                     {meta.label}
@@ -154,7 +154,7 @@ export default function Ledger() {
           </details>
         </Card>
         <Link to="/ledger/new" className="shrink-0">
-          <Button size="icon" aria-label="新增记录" className="h-[54px] w-[54px] rounded-[20px] bg-[#2f9d84] shadow-[0_10px_22px_rgba(47,157,132,0.18)] active:bg-[#287f6f]">
+          <Button size="icon" aria-label="新增记录" className="h-[54px] w-[54px] rounded-[20px] shadow-[0_10px_22px_rgba(79,155,121,0.18)]">
             <Plus className="h-5 w-5" />
           </Button>
         </Link>

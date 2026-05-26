@@ -499,9 +499,9 @@ function PillChoice({
 }
 
 function selectedChoiceClass(tone: ChoiceTone) {
-  if (tone === 'liability') return 'border-danger-light bg-danger-light/75 text-danger shadow-[0_8px_20px_rgba(225,29,72,0.08)] focus:ring-danger/15'
+  if (tone === 'liability') return 'border-danger-light bg-danger-light/75 text-danger shadow-[0_8px_20px_rgba(181,107,107,0.08)] focus:ring-danger/15'
   if (tone === 'info') return 'border-info-light bg-info-light/80 text-info shadow-[0_8px_20px_rgba(59,130,246,0.08)] focus:ring-info/15'
-  if (tone === 'asset') return 'border-brand-light bg-brand-light/75 text-brand-dark shadow-[0_8px_20px_rgba(16,185,129,0.08)] focus:ring-brand/15'
+  if (tone === 'asset') return 'border-brand-light bg-brand-light/75 text-brand-dark shadow-[0_8px_20px_rgba(79,155,121,0.08)] focus:ring-brand/15'
   return 'border-surface-border bg-white text-ink shadow-[0_8px_20px_rgba(36,53,47,0.06)] focus:ring-ink/10'
 }
 

@@ -36,6 +36,7 @@ export function aiEntryMessages(input: string) {
         '你是家庭资产台账录入助手。',
         '请把用户的自然语言整理为 JSON，不要输出解释。',
         '金额单位统一为万元。无法确定的字段给出合理默认并降低 confidence。',
+        '如果用户明确写“元”，请换算成万元；如果只写数字没有单位，按万元录入，并在 warnings 提醒用户确认金额单位。',
         '所有记录必须等待用户确认，status 一律为 draft。'
       ].join('\n')
     },

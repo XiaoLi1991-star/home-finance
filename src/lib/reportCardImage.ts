@@ -55,7 +55,7 @@ const PALETTES = [
     ink: '#1d322b',
     muted: '#5d7067',
     accent: '#2f7b5d',
-    debt: '#b65d5d',
+    debt: '#8f5f5e',
     glowA: 'rgba(79,155,121,0.30)',
     glowB: 'rgba(219,166,70,0.22)',
     glowC: 'rgba(72,108,159,0.16)'
@@ -67,7 +67,7 @@ const PALETTES = [
     ink: '#1f2f46',
     muted: '#657386',
     accent: '#486c9f',
-    debt: '#c25b66',
+    debt: '#9a6970',
     glowA: 'rgba(72,108,159,0.25)',
     glowB: 'rgba(79,155,121,0.18)',
     glowC: 'rgba(194,91,102,0.18)'

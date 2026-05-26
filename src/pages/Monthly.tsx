@@ -35,7 +35,7 @@ const MONTHLY_CATEGORY_VISUALS: Record<LedgerCategory, {
 }> = {
   cash_accounts: {
     icon: Wallet,
-    accent: 'bg-[#2f9d84]',
+    accent: 'bg-brand',
     tint: 'bg-[#eef8f4]',
     chip: 'bg-[#dff2eb] text-[#347c6f]',
     amount: 'text-[#347c6f]'
@@ -174,7 +174,7 @@ export default function Monthly() {
       <Button
         size="lg"
         variant={hasSnapshotRecords ? 'primary' : 'secondary'}
-        className={hasSnapshotRecords ? 'w-full bg-[#2f9d84] shadow-[0_8px_18px_rgba(47,157,132,0.18)] active:bg-[#287f6f]' : 'w-full border-dashed bg-surface-dim text-ink-muted shadow-none'}
+        className={hasSnapshotRecords ? 'w-full shadow-[0_8px_18px_rgba(79,155,121,0.18)]' : 'w-full border-dashed bg-surface-dim text-ink-muted shadow-none'}
         disabled={saving || !hasSnapshotRecords}
         onClick={async () => {
           if (!hasSnapshotRecords) return

@@ -377,7 +377,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
       <span
         className={cn(
           'relative h-7 w-12 shrink-0 rounded-full p-1 transition',
-          checked ? 'bg-brand shadow-[0_8px_18px_rgba(16,185,129,0.20)]' : 'bg-surface-border'
+          checked ? 'bg-brand shadow-[0_8px_18px_rgba(79,155,121,0.20)]' : 'bg-surface-border'
         )}
       >
         <span

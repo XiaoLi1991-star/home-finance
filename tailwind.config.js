@@ -6,13 +6,13 @@ export default {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#10b981', // Emerald 500
-          light: '#d1fae5', // Emerald 100
-          dark: '#059669', // Emerald 600
+          DEFAULT: '#4f9b79',
+          light: '#e5f3ed',
+          dark: '#347c6f',
         },
         danger: {
-          DEFAULT: '#e11d48', // Rose 600
-          light: '#ffe4e6', // Rose 100
+          DEFAULT: '#b56b6b',
+          light: '#fbf0ef',
         },
         info: {
           DEFAULT: '#3b82f6', // Blue 500
@@ -34,4 +34,3 @@ export default {
   },
   plugins: []
 }
-

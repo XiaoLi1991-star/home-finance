@@ -46,6 +46,9 @@ export default function AiEntry() {
           onChange={event => setInput(event.target.value)}
           placeholder="例如：新增一笔共同的微信零钱 1.2 万；还有一笔住房贷款剩余 57.1 万。"
         />
+        <p className="text-xs leading-5 text-ink-muted">
+          金额默认按万元理解：2000 元请写 0.2 万，2000 万才写 2000 万。
+        </p>
         <Button className="w-full" disabled={!input.trim() || loading} onClick={run}>
           <WandSparkles className="h-4 w-4" />
           {loading ? '解析中...' : '生成待确认记录'}
